@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 
 // ─────────────────────────────────────────────────────────────
-// ElweroBarbero — v4
+// ElweroBarbero — v3
 // Demo de agenda para barberías. Datos ficticios.
 // ─────────────────────────────────────────────────────────────
 
@@ -25,15 +25,16 @@ const HOY = "2026-07-21";
 
 const CITAS_INI = [
   { id: 1, fecha: HOY, h: 9.0, dur: 40, cliente: "Ricardo Muñoz", tel: "4491234567", serv: "Corte", precio: 150, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 2, fecha: HOY, h: 9.0, dur: 60, cliente: "Iván Delgado", tel: "4497654321", serv: "Corte + barba", precio: 290, barbero: 2, estado: "completada", pago: "tarjeta", nota: "Degradado bajo" },
+  { id: 2, fecha: HOY, h: 9.75, dur: 60, cliente: "Iván Delgado", tel: "4497654321", serv: "Corte + barba", precio: 290, barbero: 2, estado: "completada", pago: "tarjeta", nota: "Degradado bajo" },
   { id: 3, fecha: HOY, h: 11.0, dur: 15, cliente: "Toño Ramírez", tel: "4491112233", serv: "Contornos", precio: 60, barbero: 1, estado: "completada", pago: "efectivo", nota: "" },
   { id: 4, fecha: HOY, h: 11.5, dur: 40, cliente: "Beto Cardona", tel: "4492223344", serv: "Corte", precio: 150, barbero: 2, estado: "confirmada", pago: "tarjeta", nota: "" },
   { id: 5, fecha: HOY, h: 12.5, dur: 30, cliente: "Diego (niño)", tel: "4493334455", serv: "Corte niño", precio: 120, barbero: 1, estado: "confirmada", pago: "efectivo", nota: "Se mueve mucho" },
   { id: 6, fecha: HOY, h: 13.5, dur: 60, cliente: "Fernando Ruiz", tel: "4494445566", serv: "Corte + barba", precio: 290, barbero: 2, estado: "confirmada", pago: "tarjeta", nota: "" },
   { id: 7, fecha: HOY, h: 17.0, dur: 40, cliente: "Alan Espinoza", tel: "4495556677", serv: "Corte", precio: 150, barbero: 1, estado: "pendiente", pago: "tarjeta", nota: "" },
-  { id: 8, fecha: HOY, h: 17.25, dur: 15, cliente: "Óscar Lira", tel: "4496667788", serv: "Contornos", precio: 60, barbero: 2, estado: "pendiente", pago: "efectivo", nota: "" },
+  { id: 8, fecha: HOY, h: 17.5, dur: 15, cliente: "Óscar Lira", tel: "4496667788", serv: "Contornos", precio: 60, barbero: 2, estado: "pendiente", pago: "efectivo", nota: "" },
   { id: 9, fecha: HOY, h: 18.0, dur: 60, cliente: "Memo Cortés", tel: "4497778899", serv: "Corte + barba", precio: 290, barbero: 1, estado: "pendiente", pago: "efectivo", nota: "" },
-  { id: 10, fecha: HOY, h: 19.25, dur: 25, cliente: "Sergio Palos", tel: "4498889900", serv: "Solo barba", precio: 130, barbero: 2, estado: "pendiente", pago: "tarjeta", nota: "" },
+  { id: 10, fecha: HOY, h: 19.0, dur: 25, cliente: "Sergio Palos", tel: "4498889900", serv: "Solo barba", precio: 130, barbero: 2, estado: "pendiente", pago: "tarjeta", nota: "" },
+  // Historial para el calendario
   { id: 11, fecha: "2026-07-20", h: 10.0, dur: 40, cliente: "Raúl Vega", tel: "", serv: "Corte", precio: 150, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
   { id: 12, fecha: "2026-07-20", h: 12.0, dur: 60, cliente: "Pablo Sáenz", tel: "", serv: "Corte + barba", precio: 290, barbero: 2, estado: "completada", pago: "efectivo", nota: "" },
   { id: 13, fecha: "2026-07-20", h: 16.0, dur: 30, cliente: "Nico Bermúdez", tel: "", serv: "Corte niño", precio: 120, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
@@ -45,14 +46,32 @@ const CITAS_INI = [
   { id: 19, fecha: "2026-07-23", h: 16.0, dur: 15, cliente: "Kevin Padilla", tel: "", serv: "Contornos", precio: 60, barbero: 1, estado: "pendiente", pago: "efectivo", nota: "" },
 ];
 
+// Rejilla de media hora, 9am a 8:30pm
 const APERTURA = 9;
 const CIERRE = 20.5;
 const PASO = 0.5;
-const PX_POR_HORA = 140;
+
+// Escala del lienzo: una cita de 15 min mide 40px reales (42 − 2 de separación),
+// que es el mínimo táctil cómodo. De ahí sale el resto de la escala.
+const PX_POR_HORA = 168;
 const ALTO_LIENZO = (CIERRE - APERTURA) * PX_POR_HORA;
+const GUTTER_COL = 4;
+
+// Medidas del carril de la agenda. Sirven para saber cuánto espacio tiene una
+// tarjeta sin medir el DOM: así los botones ya salen bien en el primer pintado.
+const ANCHO_MAX = 560;
+const PAD_AGENDA = 14;
+const ANCHO_HORAS = 50;
+const GAP_HORAS = 10;
+const anchoLienzoDe = (vw) =>
+  Math.min(ANCHO_MAX, vw) - PAD_AGENDA * 2 - ANCHO_HORAS - GAP_HORAS;
+
+const yDe = (h) => (h - APERTURA) * PX_POR_HORA;
+const altoDe = (dur) => (dur / 60) * PX_POR_HORA - 2;
+const finDe = (c) => c.h + c.dur / 60;
 
 const SLOTS = [];
-for (let h = APERTURA; h < CIERRE; h += PASO) SLOTS.push(Number(h.toFixed(2)));
+for (let h = APERTURA; h < CIERRE; h += PASO) SLOTS.push(h);
 
 const fmtHora = (h) => {
   const hh = Math.floor(h);
@@ -66,42 +85,92 @@ const fmtFechaLarga = (iso) => {
   const [a, m, d] = iso.split("-").map(Number);
   const dias = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
   const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  return `${dias[new Date(a, m - 1, d).getDay()]} ${d} de ${meses[m - 1]}`;
+  const f = new Date(a, m - 1, d);
+  return `${dias[f.getDay()]} ${d} de ${meses[m - 1]}`;
 };
 
 const C = {
   bg: "#14110E", panel: "#1D1915", panelAlt: "#221D18", line: "#2E2820",
   text: "#F0EAE0", mute: "#8A7F6E", gold: "#D4A03C", teal: "#4A8FA8",
-  verde: "#3E9E6A", verdeBg: "#212A20", amarillo: "#E8B23A",
-  morado: "#7B5EA7", rojo: "#C8564A",
+  verde: "#3E9E6A", morado: "#7B5EA7", rojo: "#C8564A",
+  // Verde de completada ya compuesto sobre el panel: opaco, para que la tarjeta
+  // no deje ver los botones de acción que viven debajo en el swipe.
+  panelHecho: "#233124",
 };
 
-// ── Layout: agrupa citas que se solapan y les asigna columna ──
-function calcularLayout(lista) {
-  const arr = [...lista].sort((a, b) => a.h - b.h || b.dur - a.dur);
-  const res = [];
-  let i = 0;
-  while (i < arr.length) {
-    const grupo = [arr[i]];
-    let fin = arr[i].h + arr[i].dur / 60;
-    let j = i + 1;
-    while (j < arr.length && arr[j].h < fin - 0.001) {
-      grupo.push(arr[j]);
-      fin = Math.max(fin, arr[j].h + arr[j].dur / 60);
-      j++;
+// ── Reparto en columnas ───────────────────────────────────────
+// Agrupa las citas que se traslapan y les asigna una columna. Dentro de un grupo
+// cada barbero conserva su carril (Güero izquierda, Chuy derecha) para que una
+// cita no cambie de lado según con quién le toque coincidir.
+function repartirEnColumnas(citas) {
+  const orden = [...citas].sort((a, b) => a.h - b.h || a.dur - b.dur);
+  const salida = [];
+  let grupo = [];
+  let finGrupo = -Infinity;
+
+  const cerrarGrupo = () => {
+    if (!grupo.length) return;
+
+    if (grupo.length === 1) {
+      salida.push({ cita: grupo[0], izqPct: 0, anchoPct: 100 });
+    } else {
+      const carriles = BARBEROS.map(b => b.id).filter(id => grupo.some(c => c.barbero === id));
+      // finSub[barbero] guarda el fin de la última cita de cada sub-columna.
+      // Solo se subdivide un carril si el mismo barbero tiene citas encimadas.
+      const finSub = {};
+      carriles.forEach(id => { finSub[id] = []; });
+
+      const puestos = grupo.map(c => {
+        const fines = finSub[c.barbero];
+        let sub = fines.findIndex(f => f <= c.h + 1e-6);
+        if (sub === -1) sub = fines.length;
+        fines[sub] = finDe(c);
+        return { cita: c, carril: carriles.indexOf(c.barbero), sub };
+      });
+
+      const anchoCarril = 100 / carriles.length;
+      puestos.forEach(p => {
+        const subs = Math.max(1, finSub[p.cita.barbero].length);
+        const ancho = anchoCarril / subs;
+        salida.push({
+          cita: p.cita,
+          izqPct: p.carril * anchoCarril + p.sub * ancho,
+          anchoPct: ancho,
+        });
+      });
     }
-    const finCol = [];
-    const delGrupo = [];
-    for (const c of grupo) {
-      let col = finCol.findIndex((f) => c.h >= f - 0.001);
-      if (col === -1) col = finCol.length;
-      finCol[col] = c.h + c.dur / 60;
-      delGrupo.push({ ...c, _col: col });
+    grupo = [];
+    finGrupo = -Infinity;
+  };
+
+  orden.forEach(c => {
+    if (grupo.length && c.h >= finGrupo - 1e-6) cerrarGrupo();
+    grupo.push(c);
+    finGrupo = Math.max(finGrupo, finDe(c));
+  });
+  cerrarGrupo();
+
+  return salida;
+}
+
+// Huecos de media hora calculados por traslape real, no por hora de inicio.
+function huecosDelDia(citas) {
+  const anchoCarril = 100 / BARBEROS.length;
+  const huecos = [];
+  SLOTS.forEach(h => {
+    const libres = BARBEROS.filter(b =>
+      !citas.some(c => c.barbero === b.id && c.h < h + PASO && finDe(c) > h)
+    );
+    if (libres.length === BARBEROS.length) {
+      huecos.push({ h, barbero: null, izqPct: 0, anchoPct: 100 });
+    } else {
+      libres.forEach(b => {
+        const i = BARBEROS.findIndex(x => x.id === b.id);
+        huecos.push({ h, barbero: b, izqPct: i * anchoCarril, anchoPct: anchoCarril });
+      });
     }
-    for (const c of delGrupo) res.push({ ...c, _cols: finCol.length });
-    i = j;
-  }
-  return res;
+  });
+  return huecos;
 }
 
 // ── CountUp ───────────────────────────────────────────────────
@@ -122,6 +191,7 @@ function CountUp({ to, dur = 1100, prefix = "", suffix = "", play }) {
   return <span>{prefix}{v.toLocaleString("es-MX")}{suffix}</span>;
 }
 
+// ── ShinyText ─────────────────────────────────────────────────
 function ShinyText({ children }) {
   return (
     <span style={{
@@ -135,32 +205,51 @@ function ShinyText({ children }) {
 }
 
 // ── Iconos ────────────────────────────────────────────────────
-const sv = { fill: "none", stroke: "currentColor", strokeWidth: 2.6, strokeLinecap: "round", strokeLinejoin: "round" };
-const IcCheck = ({ s = 17 }) => <svg width={s} height={s} viewBox="0 0 24 24" {...sv} strokeWidth={3}><polyline points="20 6 9 17 4 12" /></svg>;
-const IcUndo = ({ s = 17 }) => <svg width={s} height={s} viewBox="0 0 24 24" {...sv}><path d="M3 10h11a5 5 0 0 1 0 10h-4" /><polyline points="7 6 3 10 7 14" /></svg>;
-const IcMove = ({ s = 17 }) => <svg width={s} height={s} viewBox="0 0 24 24" {...sv}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>;
-const IcTrash = ({ s = 17 }) => <svg width={s} height={s} viewBox="0 0 24 24" {...sv}><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></svg>;
+const IcCheck = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+);
+const IcUndo = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 8 3 14 9 14" /><path d="M5.6 16.5a8.5 8.5 0 1 0 1.4-9.9L3 10" /></svg>
+);
+const IcMove = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>
+);
+const IcTrash = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+);
 
-// ── SwipeCard ─────────────────────────────────────────────────
-function SwipeCard({ cita, abierta, onAbrir, onCerrar, onTocar, onCompletar, onReabrir, onMover, onBorrar, top, alto, left, width, compacto }) {
+// ── SwipeCard (React Bits: swipe-to-reveal) ───────────────────
+function SwipeCard({
+  cita, abierta, top, alto, izqPct, anchoPct, anchoPx,
+  onAbrir, onCerrar, onAlternar, onMover, onBorrar, onTocar,
+}) {
   const [dx, setDx] = useState(0);
   const [arrastrando, setArrastrando] = useState(false);
   const ref = useRef({ x0: 0, y0: 0, dx0: 0, activo: false, decidido: false, esHoriz: false });
 
-  const anchoBtn = compacto ? 48 : 62;
-  const ANCHO = anchoBtn * 3 + 14 + 4;
+  const completada = cita.estado === "completada";
 
-  const objetivo = abierta ? -ANCHO : 0;
+  // Los botones se ajustan al espacio real de la tarjeta: en una columna angosta
+  // (dos barberos a la vez) o en una cita de 15 min se quedan solo con el icono.
+  const bw = anchoPx >= 300 ? 62 : anchoPx >= 230 ? 50 : 40;
+  const gapBtn = bw >= 50 ? 7 : 5;
+  const conTexto = bw >= 50 && alto >= 62;
+  const anchoAcciones = bw * 3 + gapBtn * 2 + 4;
+  const altoBtn = Math.max(36, Math.min(alto - 4, 92));
+
+  const objetivo = abierta ? -anchoAcciones : 0;
   const x = arrastrando ? dx : objetivo;
 
   const inicio = (cx, cy) => {
-    ref.current = { x0: cx, y0: cy, dx0: abierta ? -ANCHO : 0, activo: true, decidido: false, esHoriz: false };
+    ref.current = { x0: cx, y0: cy, dx0: abierta ? -anchoAcciones : 0, activo: true, decidido: false, esHoriz: false };
   };
 
   const mover_ = (cx, cy, e) => {
     const r = ref.current;
     if (!r.activo) return;
-    const ddx = cx - r.x0, ddy = cy - r.y0;
+    const ddx = cx - r.x0;
+    const ddy = cy - r.y0;
+
     if (!r.decidido) {
       if (Math.abs(ddx) < 8 && Math.abs(ddy) < 8) return;
       r.decidido = true;
@@ -169,58 +258,68 @@ function SwipeCard({ cita, abierta, onAbrir, onCerrar, onTocar, onCompletar, onR
     }
     if (!r.esHoriz) return;
     if (e && e.cancelable) e.preventDefault();
+
     let nx = r.dx0 + ddx;
-    if (nx > 0) nx *= 0.28;
-    if (nx < -ANCHO) nx = -ANCHO + (nx + ANCHO) * 0.28;
+    if (nx > 0) nx = nx * 0.28;                          // resistencia al abrir a la derecha
+    if (nx < -anchoAcciones) nx = -anchoAcciones + (nx + anchoAcciones) * 0.28;
     setDx(nx);
   };
 
   const fin = () => {
     const r = ref.current;
     if (!r.activo) return;
-    const eraHoriz = r.esHoriz, movio = r.decidido;
+    const eraHoriz = r.esHoriz;
+    const movio = r.decidido;
     r.activo = false;
-    if (!eraHoriz) { setArrastrando(false); if (!movio) onTocar(); return; }
-    if (dx < (abierta ? -ANCHO + 55 : -55)) onAbrir(); else onCerrar();
+
+    if (!eraHoriz) {
+      setArrastrando(false);
+      if (!movio) onTocar();
+      return;
+    }
+    const umbral = abierta ? -anchoAcciones + 55 : -55;
+    if (dx < umbral) onAbrir(); else onCerrar();
     setArrastrando(false);
   };
 
-  const b = BARBEROS.find((x) => x.id === cita.barbero);
-  const hecha = cita.estado === "completada";
-  const chico = alto < 56;
-  const iconSize = compacto ? 15 : 17;
+  const b = BARBEROS.find(x => x.id === cita.barbero);
+  const compacta = alto < 56;
+  const conNota = alto >= 104 && !!cita.nota;
 
-  const btn = (color, Icon, txt, fn) => (
-    <button onClick={(e) => { e.stopPropagation(); fn(); }} style={{
-      width: anchoBtn, height: "100%", maxHeight: 96, minHeight: 40,
-      background: color, border: "none", borderRadius: 999, color: "#fff",
-      display: "flex", flexDirection: "column", alignItems: "center",
-      justifyContent: "center", gap: 3, cursor: "pointer", padding: "6px 0", flexShrink: 0,
+  const btn = (color, colorTexto, Icon, txt, fn) => (
+    <button onClick={(e) => { e.stopPropagation(); fn(); }} aria-label={txt} style={{
+      width: bw, height: altoBtn,
+      background: color, border: "none", borderRadius: 999,
+      color: colorTexto, display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: conTexto ? 4 : 0,
+      cursor: "pointer", padding: 0, flexShrink: 0,
     }}>
-      <Icon s={iconSize} />
-      {!chico && <span style={{ fontSize: compacto ? 8.5 : 9.5, fontWeight: 600 }}>{txt}</span>}
+      <Icon />
+      {conTexto && <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: .2 }}>{txt}</span>}
     </button>
   );
 
   return (
     <div style={{
-      position: "absolute", top, left, width, height: alto,
+      position: "absolute", top, height: alto,
+      left: `${izqPct}%`,
+      width: anchoPct >= 100 ? "100%" : `calc(${anchoPct}% - ${GUTTER_COL}px)`,
       overflow: "hidden", borderRadius: 11,
     }}>
       {/* Capa inferior: acciones */}
       <div style={{
-        position: "absolute", top: 0, right: 0, bottom: 0, width: ANCHO,
-        display: "flex", alignItems: "center", justifyContent: "flex-end",
-        gap: 7, paddingRight: 4,
+        position: "absolute", top: 0, right: 0, bottom: 0,
+        width: anchoAcciones, display: "flex", alignItems: "center",
+        justifyContent: "flex-end", gap: gapBtn, paddingRight: 4,
       }}>
-        {hecha
-          ? btn(C.amarillo, IcUndo, "Incompleta", onReabrir)
-          : btn(C.verde, IcCheck, "Completar", onCompletar)}
-        {btn(C.morado, IcMove, "Mover", onMover)}
-        {btn(C.rojo, IcTrash, "Eliminar", onBorrar)}
+        {completada
+          ? btn(C.gold, C.bg, IcUndo, "Deshacer", onAlternar)
+          : btn(C.verde, "#fff", IcCheck, "Completar", onAlternar)}
+        {btn(C.morado, "#fff", IcMove, "Mover", onMover)}
+        {btn(C.rojo, "#fff", IcTrash, "Eliminar", onBorrar)}
       </div>
 
-      {/* Capa superior: tarjeta (fondo SÓLIDO, nunca translúcido) */}
+      {/* Capa superior: tarjeta */}
       <div
         onTouchStart={(e) => inicio(e.touches[0].clientX, e.touches[0].clientY)}
         onTouchMove={(e) => mover_(e.touches[0].clientX, e.touches[0].clientY, e)}
@@ -233,39 +332,56 @@ function SwipeCard({ cita, abierta, onAbrir, onCerrar, onTocar, onCompletar, onR
           position: "absolute", inset: 0,
           transform: `translateX(${x}px)`,
           transition: arrastrando ? "none" : "transform .42s cubic-bezier(.22,1.1,.36,1)",
-          background: hecha ? C.verdeBg : C.panel,
-          borderLeft: `3px solid ${hecha ? C.verde : b.color}`,
-          borderRadius: 11, padding: chico ? "0 10px" : "8px 12px",
+          background: completada ? C.panelHecho : C.panel,
+          borderLeft: `3px solid ${completada ? C.verde : b.color}`,
+          borderRadius: 11, padding: compacta ? "0 11px" : "9px 13px",
           display: "flex", flexDirection: "column", justifyContent: "center",
           cursor: "grab", touchAction: "pan-y", userSelect: "none",
         }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 7 }}>
-          <span style={{
-            fontSize: chico ? 12.5 : 14.5, fontWeight: 600,
-            color: hecha ? C.verde : C.text,
-            textDecoration: hecha ? "line-through" : "none",
-            textDecorationColor: "rgba(62,158,106,.5)",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>{cita.cliente}</span>
-          <span style={{ fontSize: chico ? 10.5 : 12, color: C.mute, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
-            {fmtHora(cita.h)}
-          </span>
-        </div>
-        {!chico && (
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 11.5, color: C.mute, gap: 8 }}>
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {cita.serv} · {cita.dur}min · {b.nombre}
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-              <span style={{ fontSize: 9.5, opacity: .75 }}>{cita.pago === "tarjeta" ? "▭" : "$"}</span>
-              <span style={{ color: hecha ? C.verde : b.color }}>${cita.precio}</span>
+
+        {compacta ? (
+          // Una sola línea: no cabe la fila de servicio, el barbero se lee por el borde.
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <span style={{
+              fontSize: 13, fontWeight: 600,
+              color: completada ? C.verde : C.text,
+              // Color dentro de la shorthand: mezclarla con textDecorationColor
+              // hace que React avise de estilos en conflicto al re-renderizar.
+              textDecoration: completada ? "line-through rgba(62,158,106,.5)" : "none",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>{cita.cliente}</span>
+            <span style={{ fontSize: 11, color: C.mute, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+              {fmtHora(cita.h)} · <span style={{ color: completada ? C.verde : b.color }}>${cita.precio}</span>
             </span>
           </div>
-        )}
-        {alto > 92 && cita.nota && (
-          <div style={{ fontSize: 11, color: C.mute, marginTop: 4, fontStyle: "italic", opacity: .8 }}>
-            {cita.nota}
-          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+              <span style={{
+                fontSize: 14.5, fontWeight: 600,
+                color: completada ? C.verde : C.text,
+                textDecoration: completada ? "line-through rgba(62,158,106,.5)" : "none",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>{cita.cliente}</span>
+              <span style={{ fontSize: 12, color: C.mute, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+                {fmtHora(cita.h)}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 11.5, color: C.mute, gap: 8 }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {cita.serv} · {cita.dur}min · {b.nombre}
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                <span style={{ fontSize: 9.5, opacity: .75 }}>{cita.pago === "tarjeta" ? "▭" : "$"}</span>
+                <span style={{ color: completada ? C.verde : b.color }}>${cita.precio}</span>
+              </span>
+            </div>
+            {conNota && (
+              <div style={{ fontSize: 11, color: C.mute, marginTop: 4, fontStyle: "italic", opacity: .8 }}>
+                {cita.nota}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -281,6 +397,7 @@ export default function App() {
   const [abierta, setAbierta] = useState(null);
   const [aviso, setAviso] = useState(null);
 
+  // Alta
   const [paso, setPaso] = useState(0);
   const [serv, setServ] = useState(null);
   const [hueco, setHueco] = useState(null);
@@ -291,14 +408,26 @@ export default function App() {
   const [nota, setNota] = useState("");
   const [listo, setListo] = useState(false);
 
+  // Mover
   const [moviendo, setMoviendo] = useState(null);
+
+  // Calendario
   const [mes, setMes] = useState({ a: 2026, m: 7 });
   const [diaSel, setDiaSel] = useState(null);
-  const [vistoDash, setVistoDash] = useState(false);
 
+  // Ancho del lienzo: define el tamaño de los botones del swipe.
+  const [vw, setVw] = useState(() => document.documentElement.clientWidth);
+  useEffect(() => {
+    const f = () => setVw(document.documentElement.clientWidth);
+    window.addEventListener("resize", f);
+    return () => window.removeEventListener("resize", f);
+  }, []);
+  const anchoLienzo = anchoLienzoDe(vw);
+
+  const [vistoDash, setVistoDash] = useState(false);
   useEffect(() => {
     if (tab === "numeros") { const t = setTimeout(() => setVistoDash(true), 60); return () => clearTimeout(t); }
-    setVistoDash(false);
+    else setVistoDash(false);
   }, [tab]);
 
   useEffect(() => {
@@ -307,54 +436,54 @@ export default function App() {
     return () => clearTimeout(t);
   }, [aviso]);
 
-  const delDia = citas.filter((c) => c.fecha === fecha);
-  const conLayout = calcularLayout(delDia);
+  const delDia = citas.filter(c => c.fecha === fecha).sort((a, b) => a.h - b.h);
+  const disposicion = repartirEnColumnas(delDia);
+  const huecos = huecosDelDia(delDia);
 
+  // ── Disponibilidad ──
   const huecosPara = (min, f = fecha, excluirId = null, barb = null) => {
-    const otras = citas.filter((c) => c.fecha === f && c.id !== excluirId && (barb ? c.barbero === barb : true));
-    return SLOTS.filter((h) => {
+    const otras = citas.filter(c => c.fecha === f && c.id !== excluirId && (barb ? c.barbero === barb : true));
+    return SLOTS.filter(h => {
       const fin = h + min / 60;
       if (fin > CIERRE) return false;
-      return !otras.some((c) => h < c.h + c.dur / 60 - 0.001 && fin > c.h + 0.001);
+      return !otras.some(c => {
+        const cFin = c.h + c.dur / 60;
+        return h < cFin && fin > c.h;
+      });
     });
   };
 
-  const slotsLibres = SLOTS.filter((h) =>
-    !delDia.some((c) => h < c.h + c.dur / 60 - 0.001 && h + PASO > c.h + 0.001)
-  );
-
-  const completar = (c) => {
-    setCitas((p) => p.map((x) => (x.id === c.id ? { ...x, estado: "completada" } : x)));
+  // ── Acciones ──
+  // Alternador: guardar el estado previo permite deshacer las veces que haga falta.
+  const alternarHecha = (c) => {
+    const hecha = c.estado === "completada";
+    setCitas(p => p.map(x => x.id !== c.id ? x : (hecha
+      ? { ...x, estado: x.estadoPrevio || "confirmada" }
+      : { ...x, estado: "completada", estadoPrevio: x.estado })));
     setAbierta(null);
-    setAviso(`${c.cliente} — completada`);
-  };
-
-  const reabrir = (c) => {
-    setCitas((p) => p.map((x) => (x.id === c.id ? { ...x, estado: "pendiente" } : x)));
-    setAbierta(null);
-    setAviso(`${c.cliente} — vuelve a pendiente`);
+    setAviso(hecha ? `${c.cliente} — vuelve a pendiente` : `${c.cliente} — marcada como completada`);
   };
 
   const borrar = (c) => {
-    setCitas((p) => p.filter((x) => x.id !== c.id));
+    setCitas(p => p.filter(x => x.id !== c.id));
     setAbierta(null);
     setAviso(`Cita cancelada · ${fmtHora(c.h)} quedó libre`);
   };
 
   const confirmarMover = (nuevaH) => {
-    setCitas((p) => p.map((c) => (c.id === moviendo.id ? { ...c, h: nuevaH } : c)));
+    setCitas(p => p.map(c => c.id === moviendo.id ? { ...c, h: nuevaH } : c));
     setAviso(`${moviendo.cliente} se movió a ${fmtHora(nuevaH)}`);
     setMoviendo(null);
     setAbierta(null);
   };
 
   const crear = () => {
-    const s = SERVICIOS.find((x) => x.id === serv);
-    setCitas((p) => [...p, {
+    const s = SERVICIOS.find(x => x.id === serv);
+    setCitas(p => [...p, {
       id: nextId, fecha, h: hueco, dur: s.min, cliente: nombre || "Cliente nuevo",
       tel, serv: s.nombre, precio: s.precio, barbero, estado: "pendiente", pago, nota,
     }]);
-    setNextId((n) => n + 1);
+    setNextId(n => n + 1);
     setListo(true);
   };
 
@@ -363,33 +492,42 @@ export default function App() {
     setNombre(""); setTel(""); setPago("tarjeta"); setNota(""); setListo(false);
   };
 
-  const cobrado = delDia.filter((c) => c.estado === "completada").reduce((s, c) => s + c.precio, 0);
+  const nuevaEn = (barb) => {
+    resetAlta();
+    if (barb) setBarbero(barb);   // el orden importa: resetAlta pone barbero en 1
+    setAbierta(null);
+    setTab("nueva");
+  };
+
+  // ── Métricas ──
+  const cobrado = delDia.filter(c => c.estado === "completada").reduce((s, c) => s + c.precio, 0);
   const proyectado = delDia.reduce((s, c) => s + c.precio, 0);
   const minOcup = delDia.reduce((s, c) => s + c.dur, 0);
   const ocupacion = Math.round((minOcup / ((CIERRE - APERTURA) * 60 * BARBEROS.length)) * 100);
-  const conTarjeta = delDia.filter((c) => c.pago === "tarjeta");
+  const conTarjeta = delDia.filter(c => c.pago === "tarjeta");
   const mTarjeta = conTarjeta.reduce((s, c) => s + c.precio, 0);
   const mEfectivo = proyectado - mTarjeta;
   const pctTarjeta = proyectado ? Math.round((mTarjeta / proyectado) * 100) : 0;
   const comision = Math.round(mTarjeta * 0.036);
-  const completadas = delDia.filter((c) => c.estado === "completada").length;
+  const completadas = delDia.filter(c => c.estado === "completada").length;
 
+  // ── Calendario ──
   const diasEnMes = new Date(mes.a, mes.m, 0).getDate();
   const primerDia = new Date(mes.a, mes.m - 1, 1).getDay();
   const isoDe = (d) => `${mes.a}-${String(mes.m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const cargaDe = (d) => citas.filter(c => c.fecha === isoDe(d));
   const nombreMes = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"][mes.m - 1];
 
   const cambiarMes = (n) => {
     setDiaSel(null);
-    setMes((p) => {
+    setMes(p => {
       let m = p.m + n, a = p.a;
-      if (m > 12) { m = 1; a++; }
-      if (m < 1) { m = 12; a--; }
+      if (m > 12) { m = 1; a++; } if (m < 1) { m = 12; a--; }
       return { a, m };
     });
   };
 
-  const S = SERVICIOS.find((x) => x.id === serv);
+  const S = SERVICIOS.find(x => x.id === serv);
 
   return (
     <div style={{
@@ -404,24 +542,27 @@ export default function App() {
         @keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
         @keyframes subir{from{transform:translateY(100%)}to{transform:translateY(0)}}
         @keyframes fade{from{opacity:0}to{opacity:1}}
-        @keyframes toast{0%{opacity:0;transform:translate(-50%,12px)}10%{opacity:1;transform:translate(-50%,0)}88%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,12px)}}
+        @keyframes toast{0%{opacity:0;transform:translateY(12px)}10%{opacity:1;transform:translateY(0)}88%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(12px)}}
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body,#root{margin:0;padding:0;background:${C.bg}}
         .sc::-webkit-scrollbar{display:none}
         .sc{scrollbar-width:none}
-        input,textarea{font-family:inherit}
+        input,textarea,select{font-family:inherit}
         @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
       `}</style>
 
+      {/* Toast */}
       {aviso && (
         <div style={{
-          position: "fixed", bottom: 88, left: "50%", width: "min(92%,500px)", zIndex: 90,
+          position: "fixed", bottom: 88, left: "50%", transform: "translateX(-50%)",
+          width: "min(92%,500px)", zIndex: 90,
           background: C.panelAlt, border: `1px solid ${C.gold}`, borderRadius: 11,
           padding: "13px 15px", fontSize: 13.5,
           animation: "toast 2.5s ease forwards", boxShadow: "0 10px 30px rgba(0,0,0,.55)",
         }}>{aviso}</div>
       )}
 
+      {/* Encabezado */}
       <header style={{
         padding: "calc(env(safe-area-inset-top) + 14px) 18px 13px",
         borderBottom: `1px solid ${C.line}`, position: "sticky", top: 0,
@@ -444,7 +585,7 @@ export default function App() {
         {tab === "agenda" && (
           <div style={{ padding: "13px 14px 0" }}>
             <div style={{ display: "flex", gap: 15, marginBottom: 13, alignItems: "center" }}>
-              {BARBEROS.map((b) => (
+              {BARBEROS.map(b => (
                 <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.mute }}>
                   <span style={{ width: 9, height: 9, borderRadius: 3, background: b.color }} />{b.nombre}
                 </div>
@@ -454,66 +595,80 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8 }}>
-              {/* Columna de horas */}
-              <div style={{ width: 48, flexShrink: 0, position: "relative", height: ALTO_LIENZO }}>
-                {SLOTS.map((h) => {
-                  const media = Math.abs((h % 1) - 0.5) < 0.01;
+            {/* Lienzo temporal: la posición vertical es la hora y el alto es la duración */}
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ width: 50, flexShrink: 0, position: "relative", height: ALTO_LIENZO }}>
+                {SLOTS.map(h => {
+                  const enMedia = Math.abs(h % 1 - 0.5) < 0.01;
                   return (
                     <div key={h} style={{
-                      position: "absolute", top: (h - APERTURA) * PX_POR_HORA - 6,
-                      fontSize: media ? 9.5 : 10.5,
-                      color: media ? "rgba(138,127,110,.5)" : C.mute,
+                      position: "absolute", top: yDe(h) + 2, left: 0, right: 0,
+                      fontSize: 10.5, lineHeight: 1,
+                      color: enMedia ? "rgba(138,127,110,.55)" : C.mute,
                       fontVariantNumeric: "tabular-nums",
                     }}>{fmtHora(h)}</div>
                   );
                 })}
               </div>
 
-              {/* Lienzo */}
-              <div style={{ flex: 1, position: "relative", height: ALTO_LIENZO, minWidth: 0 }}>
-                {SLOTS.map((h) => {
-                  const media = Math.abs((h % 1) - 0.5) < 0.01;
+              <div style={{ flex: 1, minWidth: 0, position: "relative", height: ALTO_LIENZO }}>
+                {/* Rejilla */}
+                {SLOTS.map(h => {
+                  const enMedia = Math.abs(h % 1 - 0.5) < 0.01;
                   return (
                     <div key={h} style={{
-                      position: "absolute", top: (h - APERTURA) * PX_POR_HORA, left: 0, right: 0,
-                      borderTop: `1px solid ${media ? "rgba(46,40,32,.42)" : C.line}`,
+                      position: "absolute", top: yDe(h), left: 0, right: 0,
+                      height: PX_POR_HORA * PASO,
+                      borderTop: `1px solid ${enMedia ? "rgba(46,40,32,.45)" : C.line}`,
+                      pointerEvents: "none",
                     }} />
                   );
                 })}
 
-                {slotsLibres.map((h) => (
-                  <div key={`l${h}`} onClick={() => { resetAlta(); setTab("nueva"); }} style={{
-                    position: "absolute", top: (h - APERTURA) * PX_POR_HORA + 3,
-                    left: 0, right: 0, height: PX_POR_HORA * PASO - 6,
-                    display: "flex", alignItems: "center", padding: "0 12px",
-                    color: "rgba(138,127,110,.4)", fontSize: 11, cursor: "pointer",
-                    borderRadius: 9, border: "1px dashed rgba(46,40,32,.8)",
-                  }}>Libre</div>
+                {/* Huecos disponibles */}
+                {huecos.map(hu => (
+                  <div
+                    key={`${hu.h}-${hu.barbero ? hu.barbero.id : "todos"}`}
+                    onClick={() => nuevaEn(hu.barbero ? hu.barbero.id : null)}
+                    style={{
+                      position: "absolute",
+                      top: yDe(hu.h) + 6, height: PX_POR_HORA * PASO - 12,
+                      left: `${hu.izqPct}%`,
+                      width: hu.anchoPct >= 100 ? "100%" : `calc(${hu.anchoPct}% - ${GUTTER_COL}px)`,
+                      border: `1px dashed ${C.line}`, borderRadius: 9,
+                      display: "flex", alignItems: "center", padding: "0 12px",
+                      color: "rgba(138,127,110,.62)", fontSize: 11.5, cursor: "pointer",
+                      overflow: "hidden", whiteSpace: "nowrap",
+                    }}>
+                    {hu.barbero ? `Libre · ${hu.barbero.nombre}` : "Libre"}
+                  </div>
                 ))}
 
-                {conLayout.map((c) => (
-                  <SwipeCard
-                    key={c.id}
-                    cita={c}
-                    abierta={abierta === c.id}
-                    onAbrir={() => setAbierta(c.id)}
-                    onCerrar={() => setAbierta((a) => (a === c.id ? null : a))}
-                    onTocar={() => setAbierta((a) => (a === c.id ? null : c.id))}
-                    onCompletar={() => completar(c)}
-                    onReabrir={() => reabrir(c)}
-                    onMover={() => { setMoviendo(c); setAbierta(null); }}
-                    onBorrar={() => borrar(c)}
-                    top={(c.h - APERTURA) * PX_POR_HORA + 2}
-                    alto={Math.max(34, (c.dur / 60) * PX_POR_HORA - 4)}
-                    left={`calc(${(c._col / c._cols) * 100}% + ${c._col ? 3 : 0}px)`}
-                    width={`calc(${100 / c._cols}% - ${c._cols > 1 ? 3 : 0}px)`}
-                    compacto={c._cols > 1}
-                  />
-                ))}
+                {/* Citas */}
+                {disposicion.map(({ cita: c, izqPct, anchoPct }) => {
+                  const anchoPx = anchoLienzo * (anchoPct / 100) - (anchoPct >= 100 ? 0 : GUTTER_COL);
+                  return (
+                    <SwipeCard
+                      key={c.id}
+                      cita={c}
+                      abierta={abierta === c.id}
+                      top={yDe(c.h)}
+                      alto={altoDe(c.dur)}
+                      izqPct={izqPct}
+                      anchoPct={anchoPct}
+                      anchoPx={anchoPx}
+                      onAbrir={() => setAbierta(c.id)}
+                      onCerrar={() => setAbierta(a => a === c.id ? null : a)}
+                      onTocar={() => setAbierta(a => a === c.id ? null : c.id)}
+                      onAlternar={() => alternarHecha(c)}
+                      onMover={() => { setMoviendo(c); setAbierta(null); }}
+                      onBorrar={() => borrar(c)}
+                    />
+                  );
+                })}
               </div>
             </div>
-            <div style={{ height: 24 }} />
+            <div style={{ height: 20 }} />
           </div>
         )}
 
@@ -522,7 +677,7 @@ export default function App() {
           <div style={{ padding: "16px 18px 0" }}>
             {!listo && (
               <div style={{ display: "flex", gap: 5, marginBottom: 18 }}>
-                {[0, 1, 2].map((i) => (
+                {[0, 1, 2].map(i => (
                   <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= paso ? C.gold : C.line, transition: "background .3s" }} />
                 ))}
               </div>
@@ -534,8 +689,9 @@ export default function App() {
                 <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 27, color: C.gold, letterSpacing: 1 }}>CITA AGENDADA</div>
                 <div style={{ color: C.mute, fontSize: 13.5, marginTop: 10, lineHeight: 1.65 }}>
                   {nombre || "Cliente nuevo"}<br />
-                  {S?.nombre} · {fmtHora(hueco)} · {BARBEROS.find((b) => b.id === barbero)?.nombre}<br />
-                  Pago: {pago}
+                  {S?.nombre} · {fmtHora(hueco)} · {BARBEROS.find(b => b.id === barbero)?.nombre}<br />
+                  Pago: {pago}<br />
+                  <span style={{ color: C.gold }}>Anotada en la agenda del día</span>
                 </div>
                 <button onClick={() => { resetAlta(); setTab("agenda"); }} style={{
                   marginTop: 24, background: C.gold, color: C.bg, border: "none",
@@ -549,7 +705,7 @@ export default function App() {
                     <h2 style={{ fontSize: 15.5, fontWeight: 700, margin: "0 0 3px" }}>¿Qué servicio?</h2>
                     <p style={{ fontSize: 12, color: C.mute, margin: "0 0 14px" }}>Paso 1 de 3</p>
                     <div style={{ display: "grid", gap: 8 }}>
-                      {SERVICIOS.map((s) => (
+                      {SERVICIOS.map(s => (
                         <button key={s.id} onClick={() => { setServ(s.id); setPaso(1); }} style={{
                           display: "flex", justifyContent: "space-between", alignItems: "center",
                           background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11,
@@ -569,10 +725,12 @@ export default function App() {
                 {paso === 1 && (
                   <>
                     <h2 style={{ fontSize: 15.5, fontWeight: 700, margin: "0 0 3px" }}>¿Con quién y a qué hora?</h2>
-                    <p style={{ fontSize: 12, color: C.mute, margin: "0 0 14px" }}>Paso 2 de 3 · {S?.nombre}, {S?.min} min</p>
+                    <p style={{ fontSize: 12, color: C.mute, margin: "0 0 14px" }}>
+                      Paso 2 de 3 · {S?.nombre}, {S?.min} min
+                    </p>
 
                     <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                      {BARBEROS.map((b) => (
+                      {BARBEROS.map(b => (
                         <button key={b.id} onClick={() => setBarbero(b.id)} style={{
                           flex: 1, background: barbero === b.id ? b.color : C.panel,
                           color: barbero === b.id ? C.bg : C.text,
@@ -584,7 +742,7 @@ export default function App() {
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-                      {huecosPara(S.min, fecha, null, barbero).map((h) => (
+                      {huecosPara(S.min, fecha, null, barbero).map(h => (
                         <button key={h} onClick={() => { setHueco(h); setPaso(2); }} style={{
                           background: C.panel, border: `1px solid ${C.line}`, borderRadius: 10,
                           padding: "15px 0", fontSize: 14, fontWeight: 600, color: C.text,
@@ -594,7 +752,7 @@ export default function App() {
                     </div>
                     {huecosPara(S.min, fecha, null, barbero).length === 0 && (
                       <p style={{ fontSize: 13, color: C.mute, textAlign: "center", padding: "24px 0" }}>
-                        {BARBEROS.find((b) => b.id === barbero)?.nombre} no tiene huecos de {S.min} min este día.
+                        {BARBEROS.find(b => b.id === barbero)?.nombre} no tiene huecos de {S.min} min este día.
                       </p>
                     )}
                     <button onClick={() => setPaso(0)} style={{
@@ -608,22 +766,22 @@ export default function App() {
                     <h2 style={{ fontSize: 15.5, fontWeight: 700, margin: "0 0 3px" }}>Datos del cliente</h2>
                     <p style={{ fontSize: 12, color: C.mute, margin: "0 0 15px" }}>Paso 3 de 3</p>
 
-                    <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" style={{
+                    <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre" style={{
                       width: "100%", background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11,
                       padding: "14px", color: C.text, fontSize: 15.5, marginBottom: 9, outline: "none", minHeight: 52,
                     }} />
-                    <input value={tel} onChange={(e) => setTel(e.target.value)} placeholder="Teléfono (449...)" inputMode="tel" style={{
+                    <input value={tel} onChange={e => setTel(e.target.value)} placeholder="Teléfono (449...)" inputMode="tel" style={{
                       width: "100%", background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11,
                       padding: "14px", color: C.text, fontSize: 15.5, marginBottom: 9, outline: "none", minHeight: 52,
                     }} />
-                    <textarea value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Nota (opcional): tipo de corte, preferencias…" rows={2} style={{
+                    <textarea value={nota} onChange={e => setNota(e.target.value)} placeholder="Nota (opcional): tipo de corte, preferencias…" rows={2} style={{
                       width: "100%", background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11,
                       padding: "14px", color: C.text, fontSize: 14.5, outline: "none", resize: "none",
                     }} />
 
                     <p style={{ fontSize: 12, color: C.mute, margin: "15px 0 8px" }}>¿Cómo va a pagar?</p>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
-                      {["tarjeta", "efectivo"].map((o) => (
+                      {["tarjeta", "efectivo"].map(o => (
                         <button key={o} onClick={() => setPago(o)} style={{
                           background: pago === o ? C.gold : C.panel,
                           color: pago === o ? C.bg : C.text,
@@ -640,7 +798,7 @@ export default function App() {
                       border: `1px solid ${C.line}`, fontSize: 13, color: C.mute, lineHeight: 1.7,
                     }}>
                       {S?.nombre} · {fmtHora(hueco)} a {fmtHora(hueco + S.min / 60)}<br />
-                      Con {BARBEROS.find((b) => b.id === barbero)?.nombre} ·
+                      Con {BARBEROS.find(b => b.id === barbero)?.nombre} ·
                       <span style={{ color: C.gold }}> ${S?.precio}</span>
                     </div>
 
@@ -660,7 +818,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ══ REGISTRO ══ */}
+        {/* ══ REGISTRO / CALENDARIO ══ */}
         {tab === "registro" && (
           <div style={{ padding: "16px 16px 0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -685,16 +843,16 @@ export default function App() {
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5 }}>
               {Array.from({ length: primerDia }).map((_, i) => <div key={`e${i}`} />)}
-              {Array.from({ length: diasEnMes }, (_, i) => i + 1).map((d) => {
+              {Array.from({ length: diasEnMes }, (_, i) => i + 1).map(d => {
                 const iso = isoDe(d);
-                const cs = citas.filter((c) => c.fecha === iso);
-                const hechas = cs.filter((c) => c.estado === "completada").length;
+                const cs = cargaDe(d);
+                const hechas = cs.filter(c => c.estado === "completada").length;
                 const esHoy = iso === HOY;
                 const sel = diaSel === iso;
                 return (
                   <button key={d} onClick={() => setDiaSel(sel ? null : iso)} style={{
                     aspectRatio: "1", background: sel ? C.gold : cs.length ? C.panel : "transparent",
-                    border: `1px solid ${esHoy || sel ? C.gold : C.line}`,
+                    border: `1px solid ${esHoy ? C.gold : sel ? C.gold : C.line}`,
                     borderRadius: 9, color: sel ? C.bg : C.text, cursor: "pointer",
                     display: "flex", flexDirection: "column", alignItems: "center",
                     justifyContent: "center", gap: 3, padding: 2, minHeight: 44,
@@ -730,12 +888,12 @@ export default function App() {
                     borderRadius: 9, padding: "8px 13px", fontSize: 12, cursor: "pointer", minHeight: 40,
                   }}>Abrir agenda</button>
                 </div>
-                {citas.filter((c) => c.fecha === diaSel).sort((a, b) => a.h - b.h).map((c) => {
-                  const b = BARBEROS.find((x) => x.id === c.barbero);
+                {citas.filter(c => c.fecha === diaSel).sort((a, b) => a.h - b.h).map(c => {
+                  const b = BARBEROS.find(x => x.id === c.barbero);
                   const hecha = c.estado === "completada";
                   return (
                     <div key={c.id} style={{
-                      background: hecha ? C.verdeBg : C.panel,
+                      background: hecha ? C.panelHecho : C.panel,
                       borderLeft: `3px solid ${hecha ? C.verde : b.color}`,
                       borderRadius: 9, padding: "11px 13px", marginBottom: 7,
                       display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
@@ -744,8 +902,7 @@ export default function App() {
                         <div style={{
                           fontSize: 14, fontWeight: 600,
                           color: hecha ? C.verde : C.text,
-                          textDecoration: hecha ? "line-through" : "none",
-                          textDecorationColor: "rgba(62,158,106,.45)",
+                          textDecoration: hecha ? "line-through rgba(62,158,106,.45)" : "none",
                         }}>{c.cliente}</div>
                         <div style={{ fontSize: 11.5, color: C.mute, marginTop: 2 }}>
                           {fmtHora(c.h)} · {c.serv} · {b.nombre}
@@ -757,8 +914,10 @@ export default function App() {
                     </div>
                   );
                 })}
-                {citas.filter((c) => c.fecha === diaSel).length === 0 && (
-                  <p style={{ fontSize: 13, color: C.mute, textAlign: "center", padding: "20px 0" }}>Sin citas ese día.</p>
+                {citas.filter(c => c.fecha === diaSel).length === 0 && (
+                  <p style={{ fontSize: 13, color: C.mute, textAlign: "center", padding: "20px 0" }}>
+                    Sin citas ese día.
+                  </p>
                 )}
               </div>
             )}
@@ -780,7 +939,11 @@ export default function App() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 9, marginBottom: 10 }}>
-              {[{ l: "Ocupación", v: ocupacion, sf: "%" }, { l: "Citas", v: delDia.length, sf: "" }, { l: "Hechas", v: completadas, sf: "" }].map((x) => (
+              {[
+                { l: "Ocupación", v: ocupacion, sf: "%" },
+                { l: "Citas", v: delDia.length, sf: "" },
+                { l: "Hechas", v: completadas, sf: "" },
+              ].map(x => (
                 <div key={x.l} style={{ background: C.panel, borderRadius: 13, padding: 14, border: `1px solid ${C.line}` }}>
                   <div style={{ fontSize: 10.5, color: C.mute, marginBottom: 5 }}>{x.l}</div>
                   <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 27, lineHeight: 1 }}>
@@ -799,7 +962,10 @@ export default function App() {
                 <div style={{ width: vistoDash ? `${pctTarjeta}%` : 0, background: C.teal, transition: "width .8s cubic-bezier(.2,.8,.3,1) .15s" }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                {[{ l: "Tarjeta", v: mTarjeta, c: C.teal, p: pctTarjeta }, { l: "Efectivo", v: mEfectivo, c: C.line, p: 100 - pctTarjeta }].map((x) => (
+                {[
+                  { l: "Tarjeta", v: mTarjeta, c: C.teal, p: pctTarjeta },
+                  { l: "Efectivo", v: mEfectivo, c: C.line, p: 100 - pctTarjeta },
+                ].map(x => (
                   <div key={x.l}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: x.c }} />
@@ -828,13 +994,14 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 72 }}>
                 {Array.from({ length: 12 }, (_, i) => {
                   const hh = 9 + i;
-                  const n = delDia.filter((c) => Math.floor(c.h) === hh).length;
+                  const n = delDia.filter(c => Math.floor(c.h) === hh).length;
+                  const alto = Math.min(n * 34, 68);
                   return (
                     <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
                       <div style={{
                         width: "100%", borderRadius: "3px 3px 0 0",
                         background: n >= 2 ? C.gold : C.line,
-                        height: vistoDash ? `${Math.max(Math.min(n * 34, 68), 3)}px` : 0,
+                        height: vistoDash ? `${Math.max(alto, 3)}px` : 0,
                         transition: `height .55s cubic-bezier(.2,.8,.3,1) ${i * 40}ms`,
                       }} />
                       <span style={{ fontSize: 8, color: C.mute }}>{hh > 12 ? hh - 12 : hh}</span>
@@ -855,7 +1022,7 @@ export default function App() {
                 </span>
               </div>
               <div style={{ fontSize: 11.5, color: C.mute, marginTop: 9, lineHeight: 1.5 }}>
-                Dato de ejemplo. Ajústalo con las cifras reales de la barbería.
+                Dato de ejemplo para dimensionar el hueco que dejan las ausencias.
               </div>
             </div>
             <div style={{ height: 24 }} />
@@ -882,11 +1049,11 @@ export default function App() {
               {moviendo.cliente} · {moviendo.serv} · {moviendo.dur} min
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-              {huecosPara(moviendo.dur, moviendo.fecha, moviendo.id, moviendo.barbero).map((h) => (
+              {huecosPara(moviendo.dur, moviendo.fecha, moviendo.id, moviendo.barbero).map(h => (
                 <button key={h} onClick={() => confirmarMover(h)} style={{
-                  background: Math.abs(h - moviendo.h) < 0.01 ? C.gold : C.panel,
-                  color: Math.abs(h - moviendo.h) < 0.01 ? C.bg : C.text,
-                  border: `1px solid ${Math.abs(h - moviendo.h) < 0.01 ? C.gold : C.line}`,
+                  background: h === moviendo.h ? C.gold : C.panel,
+                  color: h === moviendo.h ? C.bg : C.text,
+                  border: `1px solid ${h === moviendo.h ? C.gold : C.line}`,
                   borderRadius: 10, padding: "14px 0", fontSize: 13.5,
                   fontWeight: 600, cursor: "pointer", minHeight: 48,
                 }}>{fmtHora(h)}</button>
@@ -919,7 +1086,7 @@ export default function App() {
           { id: "nueva", t: "Nueva" },
           { id: "registro", t: "Registro" },
           { id: "numeros", t: "Números" },
-        ].map((x) => (
+        ].map(x => (
           <button key={x.id} onClick={() => { if (x.id === "nueva") resetAlta(); setAbierta(null); setTab(x.id); }} style={{
             flex: 1, background: tab === x.id ? C.gold : "transparent",
             color: tab === x.id ? C.bg : C.mute, border: "none",
