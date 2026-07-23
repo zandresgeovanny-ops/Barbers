@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 // ─────────────────────────────────────────────────────────────
 // ElweroBarbero — v3
@@ -21,7 +21,22 @@ const SERVICIOS = [
   { id: 8, nombre: "Tinte", precio: 350, min: 75 },
 ];
 
-const HOY = "2026-07-21";
+// La demo tiene que abrir en el día en que se presenta. Las fechas semilla se
+// calculan como desplazamientos respecto a hoy, no como cadenas fijas: con una
+// fecha escrita a mano la agenda envejece y el cliente ve un día pasado.
+const diaISO = (desp = 0) => {
+  const f = new Date();
+  f.setHours(12, 0, 0, 0);            // mediodía: inmune a los cambios de horario
+  f.setDate(f.getDate() + desp);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+};
+
+const HOY = diaISO(0);
+const AYER = diaISO(-1);
+const HACE3 = diaISO(-3);
+const HACE4 = diaISO(-4);
+const MANANA = diaISO(1);
+const EN2 = diaISO(2);
 
 const CITAS_INI = [
   { id: 1, fecha: HOY, h: 9.0, dur: 40, cliente: "Ricardo Muñoz", tel: "4491234567", serv: "Corte", precio: 150, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
@@ -35,15 +50,15 @@ const CITAS_INI = [
   { id: 9, fecha: HOY, h: 18.0, dur: 60, cliente: "Memo Cortés", tel: "4497778899", serv: "Corte + barba", precio: 290, barbero: 1, estado: "pendiente", pago: "efectivo", nota: "" },
   { id: 10, fecha: HOY, h: 19.0, dur: 25, cliente: "Sergio Palos", tel: "4498889900", serv: "Solo barba", precio: 130, barbero: 2, estado: "pendiente", pago: "tarjeta", nota: "" },
   // Historial para el calendario
-  { id: 11, fecha: "2026-07-20", h: 10.0, dur: 40, cliente: "Raúl Vega", tel: "", serv: "Corte", precio: 150, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 12, fecha: "2026-07-20", h: 12.0, dur: 60, cliente: "Pablo Sáenz", tel: "", serv: "Corte + barba", precio: 290, barbero: 2, estado: "completada", pago: "efectivo", nota: "" },
-  { id: 13, fecha: "2026-07-20", h: 16.0, dur: 30, cliente: "Nico Bermúdez", tel: "", serv: "Corte niño", precio: 120, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 14, fecha: "2026-07-18", h: 11.0, dur: 40, cliente: "Hugo Ledesma", tel: "", serv: "Corte", precio: 150, barbero: 2, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 15, fecha: "2026-07-18", h: 15.0, dur: 75, cliente: "Emilio Sandoval", tel: "", serv: "Tinte", precio: 350, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 16, fecha: "2026-07-17", h: 10.5, dur: 25, cliente: "Javier Rentería", tel: "", serv: "Solo barba", precio: 130, barbero: 2, estado: "completada", pago: "efectivo", nota: "" },
-  { id: 17, fecha: "2026-07-22", h: 10.0, dur: 40, cliente: "Andrés Zermeño", tel: "", serv: "Corte", precio: 150, barbero: 1, estado: "pendiente", pago: "tarjeta", nota: "" },
-  { id: 18, fecha: "2026-07-22", h: 13.0, dur: 60, cliente: "Marco Tapia", tel: "", serv: "Corte + barba", precio: 290, barbero: 2, estado: "pendiente", pago: "efectivo", nota: "" },
-  { id: 19, fecha: "2026-07-23", h: 16.0, dur: 15, cliente: "Kevin Padilla", tel: "", serv: "Contornos", precio: 60, barbero: 1, estado: "pendiente", pago: "efectivo", nota: "" },
+  { id: 11, fecha: AYER, h: 10.0, dur: 40, cliente: "Raúl Vega", tel: "", serv: "Corte", precio: 150, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
+  { id: 12, fecha: AYER, h: 12.0, dur: 60, cliente: "Pablo Sáenz", tel: "", serv: "Corte + barba", precio: 290, barbero: 2, estado: "completada", pago: "efectivo", nota: "" },
+  { id: 13, fecha: AYER, h: 16.0, dur: 30, cliente: "Nico Bermúdez", tel: "", serv: "Corte niño", precio: 120, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
+  { id: 14, fecha: HACE3, h: 11.0, dur: 40, cliente: "Hugo Ledesma", tel: "", serv: "Corte", precio: 150, barbero: 2, estado: "completada", pago: "tarjeta", nota: "" },
+  { id: 15, fecha: HACE3, h: 15.0, dur: 75, cliente: "Emilio Sandoval", tel: "", serv: "Tinte", precio: 350, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
+  { id: 16, fecha: HACE4, h: 10.5, dur: 25, cliente: "Javier Rentería", tel: "", serv: "Solo barba", precio: 130, barbero: 2, estado: "completada", pago: "efectivo", nota: "" },
+  { id: 17, fecha: MANANA, h: 10.0, dur: 40, cliente: "Andrés Zermeño", tel: "", serv: "Corte", precio: 150, barbero: 1, estado: "pendiente", pago: "tarjeta", nota: "" },
+  { id: 18, fecha: MANANA, h: 13.0, dur: 60, cliente: "Marco Tapia", tel: "", serv: "Corte + barba", precio: 290, barbero: 2, estado: "pendiente", pago: "efectivo", nota: "" },
+  { id: 19, fecha: EN2, h: 16.0, dur: 15, cliente: "Kevin Padilla", tel: "", serv: "Contornos", precio: 60, barbero: 1, estado: "pendiente", pago: "efectivo", nota: "" },
 ];
 
 // Rejilla de media hora, 9am a 8:30pm
@@ -57,14 +72,18 @@ const PX_POR_HORA = 168;
 const ALTO_LIENZO = (CIERRE - APERTURA) * PX_POR_HORA;
 const GUTTER_COL = 4;
 
-// Medidas del carril de la agenda. Sirven para saber cuánto espacio tiene una
-// tarjeta sin medir el DOM: así los botones ya salen bien en el primer pintado.
+// Medidas del lienzo. Sirven para saber cuánto espacio tiene una tarjeta sin
+// medir el DOM: así los botones ya salen bien en el primer pintado.
 const ANCHO_MAX = 560;
-const PAD_AGENDA = 14;
-const ANCHO_HORAS = 50;
-const GAP_HORAS = 10;
+const PAD_AGENDA = 12;
+const ANCHO_HORAS = 44;
+const GAP_HORAS = 8;
 const anchoLienzoDe = (vw) =>
   Math.min(ANCHO_MAX, vw) - PAD_AGENDA * 2 - ANCHO_HORAS - GAP_HORAS;
+
+// Un carril por barbero, siempre. La columna es propiedad del empleado, no del
+// conflicto de horarios: así la carga de cada uno se lee de un vistazo vertical.
+const ANCHO_CARRIL = 100 / BARBEROS.length;
 
 const yDe = (h) => (h - APERTURA) * PX_POR_HORA;
 const altoDe = (dur) => (dur / 60) * PX_POR_HORA - 2;
@@ -73,12 +92,24 @@ const finDe = (c) => c.h + c.dur / 60;
 const SLOTS = [];
 for (let h = APERTURA; h < CIERRE; h += PASO) SLOTS.push(h);
 
+// Paso fino para proponer horas de inicio: la agenda promete servicios de 15 min,
+// así que el alta tiene que poder empezar en :15 y :45, no solo en la media hora.
+const PASO_FINO = 0.25;
+
 const fmtHora = (h) => {
   const hh = Math.floor(h);
   const mm = Math.round((h - hh) * 60);
   const suf = hh >= 12 ? "pm" : "am";
   const h12 = hh > 12 ? hh - 12 : hh;
   return `${h12}:${String(mm).padStart(2, "0")}${suf}`;
+};
+
+// Minutos a lenguaje de barbería: "45min", "1h", "2h 30".
+const fmtDur = (min) => {
+  const m = Math.round(min);
+  if (m < 60) return `${m}min`;
+  const h = Math.floor(m / 60), r = m % 60;
+  return r ? `${h}h ${String(r).padStart(2, "0")}` : `${h}h`;
 };
 
 const fmtFechaLarga = (iso) => {
@@ -98,77 +129,70 @@ const C = {
   panelHecho: "#233124",
 };
 
-// ── Reparto en columnas ───────────────────────────────────────
-// Agrupa las citas que se traslapan y les asigna una columna. Dentro de un grupo
-// cada barbero conserva su carril (Güero izquierda, Chuy derecha) para que una
-// cita no cambie de lado según con quién le toque coincidir.
-function repartirEnColumnas(citas) {
-  const orden = [...citas].sort((a, b) => a.h - b.h || a.dur - b.dur);
-  const salida = [];
-  let grupo = [];
-  let finGrupo = -Infinity;
+// Rejilla horaria pintada con gradientes en vez de 23 divs absolutos: el mismo
+// dibujo con cero nodos extra que componer al scrollear. Pesa en gama media.
+const REJILLA =
+  `repeating-linear-gradient(to bottom, ${C.line} 0 1px, transparent 1px ${PX_POR_HORA}px),` +
+  `repeating-linear-gradient(to bottom, rgba(46,40,32,.45) 0 1px, transparent 1px ${PX_POR_HORA * PASO}px)`;
 
-  const cerrarGrupo = () => {
-    if (!grupo.length) return;
+// ── Reparto en carriles ───────────────────────────────────────
+// Cada barbero ocupa siempre su columna. Un carril solo se subdivide cuando ese
+// mismo barbero tiene dos citas encimadas; lo que haga el otro nunca lo estrecha.
+function repartirEnCarriles(citas) {
+  return BARBEROS.flatMap((b, iCarril) => {
+    const suyas = citas.filter(c => c.barbero === b.id).sort((x, z) => x.h - z.h || x.dur - z.dur);
+    const salida = [];
+    let grupo = [];
+    let finGrupo = -Infinity;
 
-    if (grupo.length === 1) {
-      salida.push({ cita: grupo[0], izqPct: 0, anchoPct: 100 });
-    } else {
-      const carriles = BARBEROS.map(b => b.id).filter(id => grupo.some(c => c.barbero === id));
-      // finSub[barbero] guarda el fin de la última cita de cada sub-columna.
-      // Solo se subdivide un carril si el mismo barbero tiene citas encimadas.
-      const finSub = {};
-      carriles.forEach(id => { finSub[id] = []; });
-
+    const cerrar = () => {
+      if (!grupo.length) return;
+      // fines[i] = hora en que se libera la sub-columna i. Empaque voraz.
+      const fines = [];
       const puestos = grupo.map(c => {
-        const fines = finSub[c.barbero];
         let sub = fines.findIndex(f => f <= c.h + 1e-6);
         if (sub === -1) sub = fines.length;
         fines[sub] = finDe(c);
-        return { cita: c, carril: carriles.indexOf(c.barbero), sub };
+        return { cita: c, sub };
       });
+      const n = Math.max(1, fines.length);
+      const ancho = ANCHO_CARRIL / n;
+      puestos.forEach(p => salida.push({
+        cita: p.cita,
+        izqPct: iCarril * ANCHO_CARRIL + p.sub * ancho,
+        anchoPct: ancho,
+      }));
+      grupo = [];
+      finGrupo = -Infinity;
+    };
 
-      const anchoCarril = 100 / carriles.length;
-      puestos.forEach(p => {
-        const subs = Math.max(1, finSub[p.cita.barbero].length);
-        const ancho = anchoCarril / subs;
-        salida.push({
-          cita: p.cita,
-          izqPct: p.carril * anchoCarril + p.sub * ancho,
-          anchoPct: ancho,
-        });
-      });
-    }
-    grupo = [];
-    finGrupo = -Infinity;
-  };
-
-  orden.forEach(c => {
-    if (grupo.length && c.h >= finGrupo - 1e-6) cerrarGrupo();
-    grupo.push(c);
-    finGrupo = Math.max(finGrupo, finDe(c));
+    suyas.forEach(c => {
+      if (grupo.length && c.h >= finGrupo - 1e-6) cerrar();
+      grupo.push(c);
+      finGrupo = Math.max(finGrupo, finDe(c));
+    });
+    cerrar();
+    return salida;
   });
-  cerrarGrupo();
-
-  return salida;
 }
 
-// Huecos de media hora calculados por traslape real, no por hora de inicio.
+// Huecos por carril, uniendo las medias horas libres consecutivas en un solo
+// bloque: 4 recuadros en vez de 46, menos ruido visual y menos nodos que pintar.
 function huecosDelDia(citas) {
-  const anchoCarril = 100 / BARBEROS.length;
   const huecos = [];
-  SLOTS.forEach(h => {
-    const libres = BARBEROS.filter(b =>
-      !citas.some(c => c.barbero === b.id && c.h < h + PASO && finDe(c) > h)
-    );
-    if (libres.length === BARBEROS.length) {
-      huecos.push({ h, barbero: null, izqPct: 0, anchoPct: 100 });
-    } else {
-      libres.forEach(b => {
-        const i = BARBEROS.findIndex(x => x.id === b.id);
-        huecos.push({ h, barbero: b, izqPct: i * anchoCarril, anchoPct: anchoCarril });
-      });
-    }
+  BARBEROS.forEach((b, i) => {
+    let ini = null;
+    const cerrar = (fin) => {
+      if (ini === null) return;
+      huecos.push({ ini, fin, barbero: b, izqPct: i * ANCHO_CARRIL, anchoPct: ANCHO_CARRIL });
+      ini = null;
+    };
+    SLOTS.forEach(h => {
+      const ocupado = citas.some(c => c.barbero === b.id && c.h < h + PASO && finDe(c) > h);
+      if (ocupado) cerrar(h);
+      else if (ini === null) ini = h;
+    });
+    cerrar(CIERRE);
   });
   return huecos;
 }
@@ -178,6 +202,10 @@ function CountUp({ to, dur = 1100, prefix = "", suffix = "", play }) {
   const [v, setV] = useState(0);
   useEffect(() => {
     if (!play) { setV(0); return; }
+    // Sin animación cuando el sistema la pide apagada o la pestaña está en segundo
+    // plano: ahí requestAnimationFrame no corre y la cifra se quedaría clavada en 0.
+    const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden;
+    if (quieto) { setV(to); return; }
     let raf, t0;
     const tick = (t) => {
       if (!t0) t0 = t;
@@ -186,7 +214,10 @@ function CountUp({ to, dur = 1100, prefix = "", suffix = "", play }) {
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // Red de seguridad: si el navegador nunca entrega un fotograma, la cifra
+    // aparece igual. Vale más un número correcto sin cuenta que un cero.
+    const red = setTimeout(() => setV(to), dur + 320);
+    return () => { cancelAnimationFrame(raf); clearTimeout(red); };
   }, [to, dur, play]);
   return <span>{prefix}{v.toLocaleString("es-MX")}{suffix}</span>;
 }
@@ -208,8 +239,10 @@ function ShinyText({ children }) {
 const IcCheck = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
 );
+// Flecha de retorno, como la tecla Enter: baja por la derecha, gira a la
+// izquierda y remata en punta. Se lee como "regresar", no como "recargar".
 const IcUndo = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 8 3 14 9 14" /><path d="M5.6 16.5a8.5 8.5 0 1 0 1.4-9.9L3 10" /></svg>
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 5v6a3 3 0 0 1-3 3H5" /><polyline points="9 10 5 14 9 18" /></svg>
 );
 const IcMove = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>
@@ -218,30 +251,45 @@ const IcTrash = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></svg>
 );
 
-// ── SwipeCard (React Bits: swipe-to-reveal) ───────────────────
-function SwipeCard({
+// ── SwipeCard (swipe-to-reveal) ───────────────────────────────
+const SwipeCard = React.memo(function SwipeCard({
   cita, abierta, top, alto, izqPct, anchoPct, anchoPx,
   onAbrir, onCerrar, onAlternar, onMover, onBorrar, onTocar,
 }) {
-  const [dx, setDx] = useState(0);
-  const [arrastrando, setArrastrando] = useState(false);
-  const ref = useRef({ x0: 0, y0: 0, dx0: 0, activo: false, decidido: false, esHoriz: false });
+  const capaRef = useRef(null);
+  const ref = useRef({ x0: 0, y0: 0, dx0: 0, dx: 0, activo: false, decidido: false, esHoriz: false });
 
   const completada = cita.estado === "completada";
 
-  // Los botones se ajustan al espacio real de la tarjeta: en una columna angosta
-  // (dos barberos a la vez) o en una cita de 15 min se quedan solo con el icono.
-  const bw = anchoPx >= 300 ? 62 : anchoPx >= 230 ? 50 : 40;
+  // Los botones se ajustan al espacio real de la tarjeta: en un carril angosto
+  // o en una cita de 15 min se quedan solo con el icono.
+  const bw = anchoPx >= 300 ? 62 : anchoPx >= 236 ? 50 : anchoPx >= 172 ? 44 : 38;
   const gapBtn = bw >= 50 ? 7 : 5;
   const conTexto = bw >= 50 && alto >= 62;
   const anchoAcciones = bw * 3 + gapBtn * 2 + 4;
   const altoBtn = Math.max(36, Math.min(alto - 4, 92));
 
   const objetivo = abierta ? -anchoAcciones : 0;
-  const x = arrastrando ? dx : objetivo;
+
+  // El arrastre escribe la transformación directo en el nodo. Un setState por
+  // fotograma re-renderizaría el árbol 60 veces por segundo y en un teléfono de
+  // gama media eso es justo lo que hace que el gesto se sienta pegajoso.
+  const pintar = (x, conTransicion) => {
+    const el = capaRef.current;
+    if (!el) return;
+    el.style.transition = conTransicion ? "transform .42s cubic-bezier(.22,1.1,.36,1)" : "none";
+    el.style.transform = `translate3d(${x}px,0,0)`;
+  };
+
+  // Si la tarjeta cambia de estado desde fuera (otra se abre, se completa esta),
+  // hay que devolverla a su posición: React no reescribe lo que mutamos a mano.
+  useEffect(() => { pintar(objetivo, true); }, [objetivo]);
 
   const inicio = (cx, cy) => {
-    ref.current = { x0: cx, y0: cy, dx0: abierta ? -anchoAcciones : 0, activo: true, decidido: false, esHoriz: false };
+    ref.current = {
+      x0: cx, y0: cy, dx0: objetivo, dx: objetivo,
+      activo: true, decidido: false, esHoriz: false,
+    };
   };
 
   const mover_ = (cx, cy, e) => {
@@ -254,7 +302,7 @@ function SwipeCard({
       if (Math.abs(ddx) < 8 && Math.abs(ddy) < 8) return;
       r.decidido = true;
       r.esHoriz = Math.abs(ddx) > Math.abs(ddy);
-      if (r.esHoriz) setArrastrando(true);
+      if (r.esHoriz && capaRef.current) capaRef.current.style.willChange = "transform";
     }
     if (!r.esHoriz) return;
     if (e && e.cancelable) e.preventDefault();
@@ -262,7 +310,8 @@ function SwipeCard({
     let nx = r.dx0 + ddx;
     if (nx > 0) nx = nx * 0.28;                          // resistencia al abrir a la derecha
     if (nx < -anchoAcciones) nx = -anchoAcciones + (nx + anchoAcciones) * 0.28;
-    setDx(nx);
+    r.dx = nx;
+    pintar(nx, false);
   };
 
   const fin = () => {
@@ -271,15 +320,16 @@ function SwipeCard({
     const eraHoriz = r.esHoriz;
     const movio = r.decidido;
     r.activo = false;
+    if (capaRef.current) capaRef.current.style.willChange = "auto";
 
     if (!eraHoriz) {
-      setArrastrando(false);
-      if (!movio) onTocar();
+      if (!movio) onTocar(cita);
       return;
     }
     const umbral = abierta ? -anchoAcciones + 55 : -55;
-    if (dx < umbral) onAbrir(); else onCerrar();
-    setArrastrando(false);
+    const abre = r.dx < umbral;
+    pintar(abre ? -anchoAcciones : 0, true);
+    if (abre) onAbrir(cita); else onCerrar(cita);
   };
 
   const b = BARBEROS.find(x => x.id === cita.barbero);
@@ -313,14 +363,15 @@ function SwipeCard({
         justifyContent: "flex-end", gap: gapBtn, paddingRight: 4,
       }}>
         {completada
-          ? btn(C.gold, C.bg, IcUndo, "Deshacer", onAlternar)
-          : btn(C.verde, "#fff", IcCheck, "Completar", onAlternar)}
-        {btn(C.morado, "#fff", IcMove, "Mover", onMover)}
-        {btn(C.rojo, "#fff", IcTrash, "Eliminar", onBorrar)}
+          ? btn(C.gold, C.bg, IcUndo, "Deshacer", () => onAlternar(cita))
+          : btn(C.verde, "#fff", IcCheck, "Completar", () => onAlternar(cita))}
+        {btn(C.morado, "#fff", IcMove, "Mover", () => onMover(cita))}
+        {btn(C.rojo, "#fff", IcTrash, "Eliminar", () => onBorrar(cita))}
       </div>
 
       {/* Capa superior: tarjeta */}
       <div
+        ref={capaRef}
         onTouchStart={(e) => inicio(e.touches[0].clientX, e.touches[0].clientY)}
         onTouchMove={(e) => mover_(e.touches[0].clientX, e.touches[0].clientY, e)}
         onTouchEnd={fin}
@@ -330,8 +381,8 @@ function SwipeCard({
         onMouseLeave={() => ref.current.activo && fin()}
         style={{
           position: "absolute", inset: 0,
-          transform: `translateX(${x}px)`,
-          transition: arrastrando ? "none" : "transform .42s cubic-bezier(.22,1.1,.36,1)",
+          transform: `translate3d(${objetivo}px,0,0)`,
+          transition: "transform .42s cubic-bezier(.22,1.1,.36,1)",
           background: completada ? C.panelHecho : C.panel,
           borderLeft: `3px solid ${completada ? C.verde : b.color}`,
           borderRadius: 11, padding: compacta ? "0 11px" : "9px 13px",
@@ -367,9 +418,10 @@ function SwipeCard({
                 {fmtHora(cita.h)}
               </span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 11.5, color: C.mute, gap: 8 }}>
+            {/* El nombre del barbero no se repite aquí: ya lo dice la columna. */}
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 11, color: C.mute, gap: 6 }}>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {cita.serv} · {cita.dur}min · {b.nombre}
+                {cita.serv} · {cita.dur}min
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                 <span style={{ fontSize: 9.5, opacity: .75 }}>{cita.pago === "tarjeta" ? "▭" : "$"}</span>
@@ -386,7 +438,7 @@ function SwipeCard({
       </div>
     </div>
   );
-}
+});
 
 // ═════════════════════════════════════════════════════════════
 export default function App() {
@@ -396,6 +448,7 @@ export default function App() {
   const [nextId, setNextId] = useState(200);
   const [abierta, setAbierta] = useState(null);
   const [aviso, setAviso] = useState(null);
+  const contadorAviso = useRef(0);
 
   // Alta
   const [paso, setPaso] = useState(0);
@@ -407,12 +460,16 @@ export default function App() {
   const [pago, setPago] = useState("tarjeta");
   const [nota, setNota] = useState("");
   const [listo, setListo] = useState(false);
+  const [sugerida, setSugerida] = useState(null);   // hora heredada del hueco tocado
 
   // Mover
   const [moviendo, setMoviendo] = useState(null);
 
-  // Calendario
-  const [mes, setMes] = useState({ a: 2026, m: 7 });
+  // Calendario: arranca en el mes en curso, no en uno escrito a mano
+  const [mes, setMes] = useState(() => {
+    const [a, m] = HOY.split("-").map(Number);
+    return { a, m };
+  });
   const [diaSel, setDiaSel] = useState(null);
 
   // Ancho del lienzo: define el tamaño de los botones del swipe.
@@ -436,43 +493,62 @@ export default function App() {
     return () => clearTimeout(t);
   }, [aviso]);
 
-  const delDia = citas.filter(c => c.fecha === fecha).sort((a, b) => a.h - b.h);
-  const disposicion = repartirEnColumnas(delDia);
-  const huecos = huecosDelDia(delDia);
+  // El lienzo se recalcula solo cuando cambian las citas del día, no en cada
+  // render: en gama media esto se nota al abrir el teclado o girar el teléfono.
+  const delDia = useMemo(
+    () => citas.filter(c => c.fecha === fecha).sort((a, b) => a.h - b.h),
+    [citas, fecha]
+  );
+  const disposicion = useMemo(() => repartirEnCarriles(delDia), [delDia]);
+  const huecos = useMemo(() => huecosDelDia(delDia), [delDia]);
 
   // ── Disponibilidad ──
+  // Horas ofrecidas: la rejilla de media hora más el momento exacto en que
+  // termina cada cita, que es cuando de verdad se abre un hueco de 15 min.
   const huecosPara = (min, f = fecha, excluirId = null, barb = null) => {
     const otras = citas.filter(c => c.fecha === f && c.id !== excluirId && (barb ? c.barbero === barb : true));
-    return SLOTS.filter(h => {
+    const inicios = new Set(SLOTS);
+    otras.forEach(c => {
+      const fin = Math.round(finDe(c) / PASO_FINO) * PASO_FINO;
+      if (fin >= APERTURA && fin < CIERRE) inicios.add(fin);
+    });
+    return [...inicios].sort((a, b) => a - b).filter(h => {
       const fin = h + min / 60;
       if (fin > CIERRE) return false;
-      return !otras.some(c => {
-        const cFin = c.h + c.dur / 60;
-        return h < cFin && fin > c.h;
-      });
+      return !otras.some(c => h < finDe(c) && fin > c.h);
     });
   };
 
   // ── Acciones ──
+  // El contador hace que dos avisos seguidos vuelvan a animarse: sin él, React
+  // reutiliza el mismo nodo y el segundo toast aparece ya desvanecido.
+  const notificar = useCallback((texto) => setAviso({ texto, n: contadorAviso.current++ }), []);
+
   // Alternador: guardar el estado previo permite deshacer las veces que haga falta.
-  const alternarHecha = (c) => {
+  const alternarHecha = useCallback((c) => {
     const hecha = c.estado === "completada";
     setCitas(p => p.map(x => x.id !== c.id ? x : (hecha
       ? { ...x, estado: x.estadoPrevio || "confirmada" }
       : { ...x, estado: "completada", estadoPrevio: x.estado })));
     setAbierta(null);
-    setAviso(hecha ? `${c.cliente} — vuelve a pendiente` : `${c.cliente} — marcada como completada`);
-  };
+    notificar(hecha ? `${c.cliente} — vuelve a pendiente` : `${c.cliente} — marcada como completada`);
+  }, [notificar]);
 
-  const borrar = (c) => {
+  const borrar = useCallback((c) => {
     setCitas(p => p.filter(x => x.id !== c.id));
     setAbierta(null);
-    setAviso(`Cita cancelada · ${fmtHora(c.h)} quedó libre`);
-  };
+    const b = BARBEROS.find(x => x.id === c.barbero);
+    notificar(`Cita cancelada · ${b.nombre} libre a las ${fmtHora(c.h)}`);
+  }, [notificar]);
+
+  const abrirCita = useCallback((c) => setAbierta(c.id), []);
+  const cerrarCita = useCallback((c) => setAbierta(a => (a === c.id ? null : a)), []);
+  const tocarCita = useCallback((c) => setAbierta(a => (a === c.id ? null : c.id)), []);
+  const iniciarMover = useCallback((c) => { setMoviendo(c); setAbierta(null); }, []);
 
   const confirmarMover = (nuevaH) => {
     setCitas(p => p.map(c => c.id === moviendo.id ? { ...c, h: nuevaH } : c));
-    setAviso(`${moviendo.cliente} se movió a ${fmtHora(nuevaH)}`);
+    notificar(`${moviendo.cliente} se movió a ${fmtHora(nuevaH)}`);
     setMoviendo(null);
     setAbierta(null);
   };
@@ -490,13 +566,33 @@ export default function App() {
   const resetAlta = () => {
     setPaso(0); setServ(null); setHueco(null); setBarbero(1);
     setNombre(""); setTel(""); setPago("tarjeta"); setNota(""); setListo(false);
+    setSugerida(null);
   };
 
-  const nuevaEn = (barb) => {
+  // Al tocar un hueco se hereda el barbero de esa columna y la hora exacta del
+  // punto tocado, para que el alta continúe donde el dedo señaló.
+  const nuevaEn = (barb, h) => {
     resetAlta();
     if (barb) setBarbero(barb);   // el orden importa: resetAlta pone barbero en 1
+    if (h != null) setSugerida(h);
     setAbierta(null);
     setTab("nueva");
+  };
+
+  // Si el punto que se tocó en la agenda admite este servicio, saltamos el paso 2.
+  // Se acepta el inicio ofrecido más cercano dentro de media hora: el dedo señala
+  // una zona, no un minuto, y obligar a la coincidencia exacta anularía el atajo.
+  const elegirServicio = (s) => {
+    setServ(s.id);
+    if (sugerida == null) { setPaso(1); return; }
+    const cerca = huecosPara(s.min, fecha, null, barbero)
+      .reduce((mejor, h) => (mejor === null || Math.abs(h - sugerida) < Math.abs(mejor - sugerida) ? h : mejor), null);
+    if (cerca !== null && Math.abs(cerca - sugerida) <= 0.5 + 1e-6) {
+      setHueco(cerca);
+      setPaso(2);
+    } else {
+      setPaso(1);
+    }
   };
 
   // ── Métricas ──
@@ -553,20 +649,22 @@ export default function App() {
 
       {/* Toast */}
       {aviso && (
-        <div style={{
+        <div key={aviso.n} style={{
           position: "fixed", bottom: 88, left: "50%", transform: "translateX(-50%)",
           width: "min(92%,500px)", zIndex: 90,
           background: C.panelAlt, border: `1px solid ${C.gold}`, borderRadius: 11,
           padding: "13px 15px", fontSize: 13.5,
           animation: "toast 2.5s ease forwards", boxShadow: "0 10px 30px rgba(0,0,0,.55)",
-        }}>{aviso}</div>
+        }}>{aviso.texto}</div>
       )}
 
-      {/* Encabezado */}
+      {/* Encabezado — fondo opaco a propósito: un backdrop-filter sobre un
+          lienzo que scrollea obliga al teléfono a recomponer toda la barra en
+          cada fotograma, y en gama media eso se traduce en tirones. */}
       <header style={{
         padding: "calc(env(safe-area-inset-top) + 14px) 18px 13px",
         borderBottom: `1px solid ${C.line}`, position: "sticky", top: 0,
-        background: "rgba(20,17,14,.97)", backdropFilter: "blur(10px)", zIndex: 30,
+        background: C.bg, zIndex: 30,
       }}>
         <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 28, letterSpacing: 1.5, lineHeight: 1 }}>
           <ShinyText>ELWERO BARBERO</ShinyText>
@@ -583,89 +681,132 @@ export default function App() {
 
         {/* ══ AGENDA ══ */}
         {tab === "agenda" && (
-          <div style={{ padding: "13px 14px 0" }}>
-            <div style={{ display: "flex", gap: 15, marginBottom: 13, alignItems: "center" }}>
-              {BARBEROS.map(b => (
-                <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.mute }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 3, background: b.color }} />{b.nombre}
-                </div>
-              ))}
-              <div style={{ marginLeft: "auto", fontSize: 12, color: C.mute }}>
-                {completadas}/{delDia.length} listas
+          <div style={{ padding: `11px ${PAD_AGENDA}px 0` }}>
+
+            {/* Cabecera de carriles. Va pegajosa porque el día mide casi 2000px:
+                al llegar a las 7 de la tarde hay que seguir sabiendo de quién es
+                cada columna. Las fichas se posicionan con los mismos porcentajes
+                que los carriles del lienzo para que queden alineadas al pixel. */}
+            <div style={{
+              position: "sticky", top: 0, zIndex: 12, background: C.bg,
+              paddingBottom: 9, marginBottom: 1,
+              display: "flex", gap: GAP_HORAS, alignItems: "stretch",
+            }}>
+              <div style={{
+                width: ANCHO_HORAS, flexShrink: 0, display: "flex",
+                flexDirection: "column", justifyContent: "center",
+                fontSize: 10.5, lineHeight: 1.25, color: C.mute,
+              }}>
+                <span style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{completadas}/{delDia.length}</span>
+                listas
+              </div>
+              <div style={{ flex: 1, minWidth: 0, position: "relative", height: 46 }}>
+                {BARBEROS.map((b, i) => {
+                  const suyas = delDia.filter(c => c.barbero === b.id);
+                  const min = suyas.reduce((s, c) => s + c.dur, 0);
+                  return (
+                    <div key={b.id} style={{
+                      position: "absolute", top: 0, bottom: 0,
+                      left: `${i * ANCHO_CARRIL}%`,
+                      width: `calc(${ANCHO_CARRIL}% - ${GUTTER_COL}px)`,
+                      background: C.panel, borderTop: `2px solid ${b.color}`,
+                      borderRadius: "3px 3px 10px 10px", padding: "6px 9px",
+                      overflow: "hidden",
+                    }}>
+                      <div style={{
+                        fontSize: 13, fontWeight: 700, color: b.color, lineHeight: 1.2,
+                        whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden",
+                      }}>{b.nombre}</div>
+                      <div style={{ fontSize: 10.5, color: C.mute, marginTop: 3, whiteSpace: "nowrap" }}>
+                        {suyas.length} {suyas.length === 1 ? "cita" : "citas"} · {fmtDur(min)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Lienzo temporal: la posición vertical es la hora y el alto es la duración */}
-            <div style={{ display: "flex", gap: 10 }}>
-              <div style={{ width: 50, flexShrink: 0, position: "relative", height: ALTO_LIENZO }}>
+            <div style={{ display: "flex", gap: GAP_HORAS }}>
+              <div style={{ width: ANCHO_HORAS, flexShrink: 0, position: "relative", height: ALTO_LIENZO }}>
                 {SLOTS.map(h => {
                   const enMedia = Math.abs(h % 1 - 0.5) < 0.01;
                   return (
                     <div key={h} style={{
-                      position: "absolute", top: yDe(h) + 2, left: 0, right: 0,
+                      position: "absolute", top: yDe(h) - 5, left: 0, right: 0,
                       fontSize: 10.5, lineHeight: 1,
-                      color: enMedia ? "rgba(138,127,110,.55)" : C.mute,
+                      color: enMedia ? "rgba(138,127,110,.5)" : C.mute,
                       fontVariantNumeric: "tabular-nums",
                     }}>{fmtHora(h)}</div>
                   );
                 })}
               </div>
 
-              <div style={{ flex: 1, minWidth: 0, position: "relative", height: ALTO_LIENZO }}>
-                {/* Rejilla */}
-                {SLOTS.map(h => {
-                  const enMedia = Math.abs(h % 1 - 0.5) < 0.01;
-                  return (
-                    <div key={h} style={{
-                      position: "absolute", top: yDe(h), left: 0, right: 0,
-                      height: PX_POR_HORA * PASO,
-                      borderTop: `1px solid ${enMedia ? "rgba(46,40,32,.45)" : C.line}`,
-                      pointerEvents: "none",
-                    }} />
-                  );
-                })}
-
-                {/* Huecos disponibles */}
-                {huecos.map(hu => (
-                  <div
-                    key={`${hu.h}-${hu.barbero ? hu.barbero.id : "todos"}`}
-                    onClick={() => nuevaEn(hu.barbero ? hu.barbero.id : null)}
-                    style={{
-                      position: "absolute",
-                      top: yDe(hu.h) + 6, height: PX_POR_HORA * PASO - 12,
-                      left: `${hu.izqPct}%`,
-                      width: hu.anchoPct >= 100 ? "100%" : `calc(${hu.anchoPct}% - ${GUTTER_COL}px)`,
-                      border: `1px dashed ${C.line}`, borderRadius: 9,
-                      display: "flex", alignItems: "center", padding: "0 12px",
-                      color: "rgba(138,127,110,.62)", fontSize: 11.5, cursor: "pointer",
-                      overflow: "hidden", whiteSpace: "nowrap",
-                    }}>
-                    {hu.barbero ? `Libre · ${hu.barbero.nombre}` : "Libre"}
-                  </div>
+              <div style={{
+                flex: 1, minWidth: 0, position: "relative", height: ALTO_LIENZO,
+                backgroundImage: REJILLA,
+              }}>
+                {/* Separador vertical entre carriles: hace evidente que la columna
+                    pertenece al barbero y no al hueco que quedó libre. */}
+                {BARBEROS.slice(1).map((b, i) => (
+                  <div key={b.id} style={{
+                    position: "absolute", top: 0, bottom: 0,
+                    left: `calc(${(i + 1) * ANCHO_CARRIL}% - ${GUTTER_COL / 2}px)`,
+                    width: 1, background: C.line, pointerEvents: "none",
+                  }} />
                 ))}
 
-                {/* Citas */}
-                {disposicion.map(({ cita: c, izqPct, anchoPct }) => {
-                  const anchoPx = anchoLienzo * (anchoPct / 100) - (anchoPct >= 100 ? 0 : GUTTER_COL);
+                {/* Huecos: un solo recuadro por tramo libre, no uno por media hora */}
+                {huecos.map(hu => {
+                  const altoHueco = (hu.fin - hu.ini) * PX_POR_HORA - 6;
                   return (
-                    <SwipeCard
-                      key={c.id}
-                      cita={c}
-                      abierta={abierta === c.id}
-                      top={yDe(c.h)}
-                      alto={altoDe(c.dur)}
-                      izqPct={izqPct}
-                      anchoPct={anchoPct}
-                      anchoPx={anchoPx}
-                      onAbrir={() => setAbierta(c.id)}
-                      onCerrar={() => setAbierta(a => a === c.id ? null : a)}
-                      onTocar={() => setAbierta(a => a === c.id ? null : c.id)}
-                      onAlternar={() => alternarHecha(c)}
-                      onMover={() => { setMoviendo(c); setAbierta(null); }}
-                      onBorrar={() => borrar(c)}
-                    />
+                    <div
+                      key={`${hu.barbero.id}-${hu.ini}`}
+                      onClick={(e) => {
+                        // La hora sale de dónde tocaste dentro del bloque, redondeada
+                        // a 15 min: tocar las 5 de la tarde no debe abrir a las 9.
+                        const r = e.currentTarget.getBoundingClientRect();
+                        const bruta = hu.ini + (e.clientY - r.top) / PX_POR_HORA;
+                        const h = Math.min(hu.fin - PASO_FINO, Math.max(hu.ini,
+                          Math.round(bruta / PASO_FINO) * PASO_FINO));
+                        nuevaEn(hu.barbero.id, h);
+                      }}
+                      style={{
+                        position: "absolute",
+                        top: yDe(hu.ini) + 3, height: altoHueco,
+                        left: `${hu.izqPct}%`,
+                        width: `calc(${hu.anchoPct}% - ${GUTTER_COL}px)`,
+                        border: `1px dashed ${C.line}`, borderRadius: 10,
+                        display: "flex", justifyContent: "center",
+                        alignItems: altoHueco > 120 ? "center" : "flex-start",
+                        padding: "7px 6px", cursor: "pointer",
+                        color: "rgba(138,127,110,.55)", fontSize: 11,
+                        overflow: "hidden", whiteSpace: "nowrap",
+                      }}>
+                      {altoHueco >= 26 && `Libre · ${fmtDur((hu.fin - hu.ini) * 60)}`}
+                    </div>
                   );
                 })}
+
+                {/* Citas */}
+                {disposicion.map(({ cita: c, izqPct, anchoPct }) => (
+                  <SwipeCard
+                    key={c.id}
+                    cita={c}
+                    abierta={abierta === c.id}
+                    top={yDe(c.h)}
+                    alto={altoDe(c.dur)}
+                    izqPct={izqPct}
+                    anchoPct={anchoPct}
+                    anchoPx={anchoLienzo * (anchoPct / 100) - GUTTER_COL}
+                    onAbrir={abrirCita}
+                    onCerrar={cerrarCita}
+                    onTocar={tocarCita}
+                    onAlternar={alternarHecha}
+                    onMover={iniciarMover}
+                    onBorrar={borrar}
+                  />
+                ))}
               </div>
             </div>
             <div style={{ height: 20 }} />
@@ -706,7 +847,7 @@ export default function App() {
                     <p style={{ fontSize: 12, color: C.mute, margin: "0 0 14px" }}>Paso 1 de 3</p>
                     <div style={{ display: "grid", gap: 8 }}>
                       {SERVICIOS.map(s => (
-                        <button key={s.id} onClick={() => { setServ(s.id); setPaso(1); }} style={{
+                        <button key={s.id} onClick={() => elegirServicio(s)} style={{
                           display: "flex", justifyContent: "space-between", alignItems: "center",
                           background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11,
                           padding: "14px 15px", cursor: "pointer", textAlign: "left", minHeight: 56, width: "100%", color: C.text,
@@ -1076,8 +1217,8 @@ export default function App() {
       {/* ══ NAVEGACIÓN ══ */}
       <nav style={{
         position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-        width: "min(100%,560px)", background: "rgba(20,17,14,.97)",
-        backdropFilter: "blur(12px)", borderTop: `1px solid ${C.line}`,
+        width: "min(100%,560px)", background: C.bg,
+        borderTop: `1px solid ${C.line}`,
         padding: "8px 12px calc(env(safe-area-inset-bottom) + 14px)",
         display: "flex", gap: 5, zIndex: 40,
       }}>
