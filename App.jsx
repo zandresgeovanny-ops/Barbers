@@ -38,27 +38,36 @@ const HACE4 = diaISO(-4);
 const MANANA = diaISO(1);
 const EN2 = diaISO(2);
 
-const CITAS_INI = [
+// Datos base de la demo. El estado de las citas de HOY no se fija aquí: se
+// deriva de la hora real de apertura en semilla(), para que a media mañana las
+// de la tarde sigan pendientes y por la noche aparezcan ya cobradas.
+// Algunos clientes repiten a lo largo del historial: eso alimenta la ficha de
+// cliente (visitas, gasto acumulado). Hay dos ausencias reales (no_llego) que
+// nutren la tarjeta de "no llegaron" con un conteo verdadero, no inventado.
+const CITAS_BASE = [
   { id: 1, fecha: HOY, h: 9.0, dur: 40, cliente: "Ricardo Muñoz", tel: "4491234567", serv: "Corte", precio: 150, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 2, fecha: HOY, h: 9.75, dur: 60, cliente: "Iván Delgado", tel: "4497654321", serv: "Corte + barba", precio: 290, barbero: 2, estado: "completada", pago: "tarjeta", nota: "Degradado bajo" },
+  { id: 2, fecha: HOY, h: 9.75, dur: 60, cliente: "Iván Delgado", tel: "4497654321", serv: "Corte + barba", precio: 290, barbero: 2, estado: "completada", pago: "tarjeta", nota: "Degradado bajo, sin máquina arriba" },
   { id: 3, fecha: HOY, h: 11.0, dur: 15, cliente: "Toño Ramírez", tel: "4491112233", serv: "Contornos", precio: 60, barbero: 1, estado: "completada", pago: "efectivo", nota: "" },
   { id: 4, fecha: HOY, h: 11.5, dur: 40, cliente: "Beto Cardona", tel: "4492223344", serv: "Corte", precio: 150, barbero: 2, estado: "confirmada", pago: "tarjeta", nota: "" },
-  { id: 5, fecha: HOY, h: 12.5, dur: 30, cliente: "Diego (niño)", tel: "4493334455", serv: "Corte niño", precio: 120, barbero: 1, estado: "confirmada", pago: "efectivo", nota: "Se mueve mucho" },
+  { id: 5, fecha: HOY, h: 12.5, dur: 30, cliente: "Diego Salcedo", tel: "4493334455", serv: "Corte niño", precio: 120, barbero: 1, estado: "confirmada", pago: "efectivo", nota: "Es niño, se mueve mucho" },
   { id: 6, fecha: HOY, h: 13.5, dur: 60, cliente: "Fernando Ruiz", tel: "4494445566", serv: "Corte + barba", precio: 290, barbero: 2, estado: "confirmada", pago: "tarjeta", nota: "" },
   { id: 7, fecha: HOY, h: 17.0, dur: 40, cliente: "Alan Espinoza", tel: "4495556677", serv: "Corte", precio: 150, barbero: 1, estado: "pendiente", pago: "tarjeta", nota: "" },
   { id: 8, fecha: HOY, h: 17.5, dur: 15, cliente: "Óscar Lira", tel: "4496667788", serv: "Contornos", precio: 60, barbero: 2, estado: "pendiente", pago: "efectivo", nota: "" },
-  { id: 9, fecha: HOY, h: 18.0, dur: 60, cliente: "Memo Cortés", tel: "4497778899", serv: "Corte + barba", precio: 290, barbero: 1, estado: "pendiente", pago: "efectivo", nota: "" },
+  { id: 9, fecha: HOY, h: 18.0, dur: 60, cliente: "Memo Cortés", tel: "4497778899", serv: "Corte + barba", precio: 290, barbero: 1, estado: "pendiente", pago: "efectivo", nota: "Quiere probar la línea del contorno más marcada" },
   { id: 10, fecha: HOY, h: 19.0, dur: 25, cliente: "Sergio Palos", tel: "4498889900", serv: "Solo barba", precio: 130, barbero: 2, estado: "pendiente", pago: "tarjeta", nota: "" },
-  // Historial para el calendario
-  { id: 11, fecha: AYER, h: 10.0, dur: 40, cliente: "Raúl Vega", tel: "", serv: "Corte", precio: 150, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 12, fecha: AYER, h: 12.0, dur: 60, cliente: "Pablo Sáenz", tel: "", serv: "Corte + barba", precio: 290, barbero: 2, estado: "completada", pago: "efectivo", nota: "" },
-  { id: 13, fecha: AYER, h: 16.0, dur: 30, cliente: "Nico Bermúdez", tel: "", serv: "Corte niño", precio: 120, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 14, fecha: HACE3, h: 11.0, dur: 40, cliente: "Hugo Ledesma", tel: "", serv: "Corte", precio: 150, barbero: 2, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 15, fecha: HACE3, h: 15.0, dur: 75, cliente: "Emilio Sandoval", tel: "", serv: "Tinte", precio: 350, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
-  { id: 16, fecha: HACE4, h: 10.5, dur: 25, cliente: "Javier Rentería", tel: "", serv: "Solo barba", precio: 130, barbero: 2, estado: "completada", pago: "efectivo", nota: "" },
-  { id: 17, fecha: MANANA, h: 10.0, dur: 40, cliente: "Andrés Zermeño", tel: "", serv: "Corte", precio: 150, barbero: 1, estado: "pendiente", pago: "tarjeta", nota: "" },
-  { id: 18, fecha: MANANA, h: 13.0, dur: 60, cliente: "Marco Tapia", tel: "", serv: "Corte + barba", precio: 290, barbero: 2, estado: "pendiente", pago: "efectivo", nota: "" },
-  { id: 19, fecha: EN2, h: 16.0, dur: 15, cliente: "Kevin Padilla", tel: "", serv: "Contornos", precio: 60, barbero: 1, estado: "pendiente", pago: "efectivo", nota: "" },
+  // Historial para el calendario y la ficha de cliente
+  { id: 11, fecha: AYER, h: 10.0, dur: 40, cliente: "Ricardo Muñoz", tel: "4491234567", serv: "Corte", precio: 150, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
+  { id: 12, fecha: AYER, h: 12.0, dur: 60, cliente: "Pablo Sáenz", tel: "4491002003", serv: "Corte + barba", precio: 290, barbero: 2, estado: "completada", pago: "efectivo", nota: "" },
+  { id: 13, fecha: AYER, h: 16.0, dur: 30, cliente: "Diego Salcedo", tel: "4493334455", serv: "Corte niño", precio: 120, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
+  { id: 14, fecha: HACE3, h: 11.0, dur: 40, cliente: "Beto Cardona", tel: "4492223344", serv: "Corte", precio: 150, barbero: 2, estado: "completada", pago: "tarjeta", nota: "" },
+  { id: 15, fecha: HACE3, h: 15.0, dur: 75, cliente: "Emilio Sandoval", tel: "4491005006", serv: "Tinte", precio: 350, barbero: 1, estado: "completada", pago: "tarjeta", nota: "" },
+  { id: 16, fecha: HACE4, h: 10.5, dur: 25, cliente: "Sergio Palos", tel: "4498889900", serv: "Solo barba", precio: 130, barbero: 2, estado: "completada", pago: "efectivo", nota: "" },
+  // Ausencias reales del mes: alimentan la tarjeta de "no llegaron"
+  { id: 20, fecha: HACE3, h: 17.5, dur: 40, cliente: "Lalo Márquez", tel: "4491234000", serv: "Corte", precio: 150, barbero: 2, estado: "no_llego", pago: "efectivo", nota: "" },
+  { id: 21, fecha: HACE4, h: 18.0, dur: 60, cliente: "Chava Ortiz", tel: "4491234111", serv: "Corte + barba", precio: 290, barbero: 1, estado: "no_llego", pago: "tarjeta", nota: "" },
+  { id: 17, fecha: MANANA, h: 10.0, dur: 40, cliente: "Andrés Zermeño", tel: "4491234222", serv: "Corte", precio: 150, barbero: 1, estado: "pendiente", pago: "tarjeta", nota: "" },
+  { id: 18, fecha: MANANA, h: 13.0, dur: 60, cliente: "Marco Tapia", tel: "4491234333", serv: "Corte + barba", precio: 290, barbero: 2, estado: "pendiente", pago: "efectivo", nota: "" },
+  { id: 19, fecha: EN2, h: 16.0, dur: 15, cliente: "Kevin Padilla", tel: "4491234444", serv: "Contornos", precio: 60, barbero: 1, estado: "pendiente", pago: "efectivo", nota: "" },
 ];
 
 // Rejilla de media hora, 9am a 8:30pm
@@ -88,6 +97,47 @@ const ANCHO_CARRIL = 100 / BARBEROS.length;
 const yDe = (h) => (h - APERTURA) * PX_POR_HORA;
 const altoDe = (dur) => (dur / 60) * PX_POR_HORA - 2;
 const finDe = (c) => c.h + c.dur / 60;
+
+// Hora actual como decimal (14:30 -> 14.5). La demo se ancla a este valor.
+const horaActual = () => {
+  const f = new Date();
+  return f.getHours() + f.getMinutes() / 60;
+};
+
+// La semilla adapta el estado de las citas de HOY al reloj real: lo que ya
+// terminó aparece cobrado, lo próximo confirmado y lo lejano pendiente. Así la
+// agenda nunca se ve "toda hecha" a las 9am ni "toda pendiente" a las 8pm.
+function semilla() {
+  const ahora = horaActual();
+  return CITAS_BASE.map((c) => {
+    if (c.fecha !== HOY) return { ...c };
+    let estado;
+    if (finDe(c) <= ahora) estado = "completada";
+    else if (c.h <= ahora + 2) estado = "confirmada";
+    else estado = "pendiente";
+    return { ...c, estado };
+  });
+}
+
+// Persistencia: un F5 o que el teléfono descargue la pestaña no debe borrar lo
+// capturado frente al cliente. Pero los datos se guardan con el día en que se
+// crearon; si la demo se abre otro día, se vuelve a sembrar para que la agenda
+// siga siendo "la de hoy" y no reviva citas con fecha vieja.
+const LS_KEY = "elwero_estado_v3";
+function cargarEstado() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && p.dia === HOY && Array.isArray(p.citas) && p.citas.length) return p;
+    }
+  } catch { /* localStorage bloqueado (modo privado): seguimos con la semilla */ }
+  return { dia: HOY, citas: semilla(), nextId: 200 };
+}
+
+// Nombre normalizado para agrupar al mismo cliente aunque teclees distinto.
+const claveCliente = (nombre = "") =>
+  nombre.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 const SLOTS = [];
 for (let h = APERTURA; h < CIERRE; h += PASO) SLOTS.push(h);
@@ -232,6 +282,27 @@ function ShinyText({ children }) {
       WebkitTextFillColor: "transparent",
       animation: "shine 3.5s linear infinite",
     }}>{children}</span>
+  );
+}
+
+// ── SpotlightCard (ReactBits, adaptado sin dependencias) ──────
+// Un foco radial suave sigue al cursor sobre la ficha del cliente. La posición
+// se escribe en variables CSS, no en estado de React: así no re-renderizamos el
+// árbol en cada pixel del movimiento. En táctil no hay hover y simplemente no se
+// enciende, sin coste.
+function SpotlightCard({ children, style, spot = "rgba(212,160,60,.20)" }) {
+  const ref = useRef(null);
+  const seguir = (e) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    el.style.setProperty("--my", `${e.clientY - r.top}px`);
+  };
+  return (
+    <div ref={ref} className="spot" onMouseMove={seguir} style={{ "--spot": spot, ...style }}>
+      {children}
+    </div>
   );
 }
 
@@ -444,11 +515,21 @@ const SwipeCard = React.memo(function SwipeCard({
 export default function App() {
   const [tab, setTab] = useState("agenda");
   const [fecha, setFecha] = useState(HOY);
-  const [citas, setCitas] = useState(CITAS_INI);
-  const [nextId, setNextId] = useState(200);
+  // Estado inicial hidratado desde localStorage (o la semilla del día).
+  const estadoIni = useMemo(() => cargarEstado(), []);
+  const [citas, setCitas] = useState(estadoIni.citas);
+  const [nextId, setNextId] = useState(estadoIni.nextId);
   const [abierta, setAbierta] = useState(null);
+  const [detalle, setDetalle] = useState(null);   // cita mostrada en la ficha de cliente
   const [aviso, setAviso] = useState(null);
   const contadorAviso = useRef(0);
+  const ultimoBorrado = useRef(null);              // para deshacer una cancelación
+
+  // Cada cambio se persiste sellado con el día: mañana la demo re-siembra sola.
+  useEffect(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ dia: HOY, citas, nextId })); }
+    catch { /* modo privado: la demo sigue en memoria */ }
+  }, [citas, nextId]);
 
   // Alta
   const [paso, setPaso] = useState(0);
@@ -461,9 +542,11 @@ export default function App() {
   const [nota, setNota] = useState("");
   const [listo, setListo] = useState(false);
   const [sugerida, setSugerida] = useState(null);   // hora heredada del hueco tocado
+  const [editId, setEditId] = useState(null);       // id en edición (null = alta nueva)
 
   // Mover
   const [moviendo, setMoviendo] = useState(null);
+  const [movBarbero, setMovBarbero] = useState(null);  // barbero destino al mover
 
   // Calendario: arranca en el mes en curso, no en uno escrito a mano
   const [mes, setMes] = useState(() => {
@@ -522,7 +605,9 @@ export default function App() {
   // ── Acciones ──
   // El contador hace que dos avisos seguidos vuelvan a animarse: sin él, React
   // reutiliza el mismo nodo y el segundo toast aparece ya desvanecido.
-  const notificar = useCallback((texto) => setAviso({ texto, n: contadorAviso.current++ }), []);
+  // `accion` es un botón opcional dentro del toast, p.ej. deshacer.
+  const notificar = useCallback((texto, accion = null) =>
+    setAviso({ texto, accion, n: contadorAviso.current++ }), []);
 
   // Alternador: guardar el estado previo permite deshacer las veces que haga falta.
   const alternarHecha = useCallback((c) => {
@@ -530,43 +615,108 @@ export default function App() {
     setCitas(p => p.map(x => x.id !== c.id ? x : (hecha
       ? { ...x, estado: x.estadoPrevio || "confirmada" }
       : { ...x, estado: "completada", estadoPrevio: x.estado })));
-    setAbierta(null);
+    setAbierta(null); setDetalle(null);
     notificar(hecha ? `${c.cliente} — vuelve a pendiente` : `${c.cliente} — marcada como completada`);
   }, [notificar]);
 
+  // Marca (o desmarca) que el cliente no se presentó. Alimenta la tarjeta de
+  // "no llegaron" con un conteo real, no con un número fijo.
+  const marcarNoLlego = useCallback((c) => {
+    const ausente = c.estado === "no_llego";
+    setCitas(p => p.map(x => x.id !== c.id ? x : (ausente
+      ? { ...x, estado: x.estadoPrevio || "confirmada" }
+      : { ...x, estado: "no_llego", estadoPrevio: x.estado === "no_llego" ? "confirmada" : x.estado })));
+    setAbierta(null); setDetalle(null);
+    notificar(ausente ? `${c.cliente} — vuelve a la agenda` : `${c.cliente} — marcado como no llegó`);
+  }, [notificar]);
+
   const borrar = useCallback((c) => {
+    ultimoBorrado.current = c;
     setCitas(p => p.filter(x => x.id !== c.id));
-    setAbierta(null);
+    setAbierta(null); setDetalle(null);
     const b = BARBEROS.find(x => x.id === c.barbero);
-    notificar(`Cita cancelada · ${b.nombre} libre a las ${fmtHora(c.h)}`);
+    // El toast trae su propio deshacer: un swipe sin querer no borra para siempre.
+    notificar(`Cita cancelada · ${b.nombre} libre a las ${fmtHora(c.h)}`, {
+      label: "Deshacer",
+      fn: () => {
+        if (ultimoBorrado.current) {
+          setCitas(p => [...p, ultimoBorrado.current]);
+          notificar(`${ultimoBorrado.current.cliente} — restaurada`);
+          ultimoBorrado.current = null;
+        }
+      },
+    });
   }, [notificar]);
 
   const abrirCita = useCallback((c) => setAbierta(c.id), []);
   const cerrarCita = useCallback((c) => setAbierta(a => (a === c.id ? null : a)), []);
-  const tocarCita = useCallback((c) => setAbierta(a => (a === c.id ? null : c.id)), []);
-  const iniciarMover = useCallback((c) => { setMoviendo(c); setAbierta(null); }, []);
+  // Tocar una cita abre su ficha de cliente; el swipe horizontal sigue revelando
+  // las acciones rápidas. Cerramos el swipe para que no queden ambos abiertos.
+  const tocarCita = useCallback((c) => { setAbierta(null); setDetalle(c); }, []);
+  const iniciarMover = useCallback((c) => {
+    setMoviendo(c); setMovBarbero(c.barbero); setAbierta(null); setDetalle(null);
+  }, []);
 
   const confirmarMover = (nuevaH) => {
-    setCitas(p => p.map(c => c.id === moviendo.id ? { ...c, h: nuevaH } : c));
-    notificar(`${moviendo.cliente} se movió a ${fmtHora(nuevaH)}`);
+    setCitas(p => p.map(c => c.id === moviendo.id ? { ...c, h: nuevaH, barbero: movBarbero } : c));
+    const cambioBarbero = movBarbero !== moviendo.barbero;
+    const bn = BARBEROS.find(b => b.id === movBarbero)?.nombre;
+    notificar(cambioBarbero
+      ? `${moviendo.cliente} → ${fmtHora(nuevaH)} con ${bn}`
+      : `${moviendo.cliente} se movió a ${fmtHora(nuevaH)}`);
     setMoviendo(null);
     setAbierta(null);
   };
 
-  const crear = () => {
+  // Alta y edición comparten el asistente. Con editId reemplazamos la cita en su
+  // sitio (conservando id); sin él, insertamos una nueva.
+  const guardar = () => {
     const s = SERVICIOS.find(x => x.id === serv);
-    setCitas(p => [...p, {
-      id: nextId, fecha, h: hueco, dur: s.min, cliente: nombre || "Cliente nuevo",
-      tel, serv: s.nombre, precio: s.precio, barbero, estado: "pendiente", pago, nota,
-    }]);
-    setNextId(n => n + 1);
+    if (editId != null) {
+      setCitas(p => p.map(c => c.id === editId
+        ? { ...c, fecha, h: hueco, dur: s.min, cliente: nombre || c.cliente, tel, serv: s.nombre, precio: s.precio, barbero, pago, nota }
+        : c));
+    } else {
+      setCitas(p => [...p, {
+        id: nextId, fecha, h: hueco, dur: s.min, cliente: nombre || "Cliente nuevo",
+        tel, serv: s.nombre, precio: s.precio, barbero, estado: "pendiente", pago, nota,
+      }]);
+      setNextId(n => n + 1);
+    }
     setListo(true);
   };
 
   const resetAlta = () => {
     setPaso(0); setServ(null); setHueco(null); setBarbero(1);
     setNombre(""); setTel(""); setPago("tarjeta"); setNota(""); setListo(false);
-    setSugerida(null);
+    setSugerida(null); setEditId(null);
+  };
+
+  // Editar: precarga el asistente con la cita y salta directo a los datos.
+  const editarCita = (c) => {
+    const s = SERVICIOS.find(x => x.nombre === c.serv) || SERVICIOS[0];
+    resetAlta();
+    setEditId(c.id); setServ(s.id); setHueco(c.h); setBarbero(c.barbero);
+    setNombre(c.cliente); setTel(c.tel || ""); setPago(c.pago); setNota(c.nota || "");
+    setFecha(c.fecha); setPaso(2);
+    setDetalle(null); setAbierta(null);
+    setTab("nueva");
+  };
+
+  // Agendar en una fecha concreta desde el calendario.
+  const agendarEn = (iso) => {
+    resetAlta(); setFecha(iso); setDetalle(null); setAbierta(null); setTab("nueva");
+  };
+
+  // Vuelve a la semilla del día y limpia lo guardado. Deja la demo lista para
+  // el siguiente cliente sin arrastrar lo que se tecleó en la visita anterior.
+  const reiniciarDemo = () => {
+    try { localStorage.removeItem(LS_KEY); } catch { /* nada que limpiar */ }
+    const s = semilla();
+    setCitas(s); setNextId(200);
+    setFecha(HOY); setAbierta(null); setDetalle(null); setMoviendo(null);
+    resetAlta(); setTab("agenda");
+    notificar("Demo reiniciada");
   };
 
   // Al tocar un hueco se hereda el barbero de esa columna y la hora exacta del
@@ -607,6 +757,12 @@ export default function App() {
   const comision = Math.round(mTarjeta * 0.036);
   const completadas = delDia.filter(c => c.estado === "completada").length;
 
+  // Ausencias del mes en curso: conteo real que alimenta la tarjeta de "no
+  // llegaron". Marcar una cita como "no llegó" en la agenda la mueve aquí.
+  const prefijoMes = HOY.slice(0, 7);
+  const noShows = citas.filter(c => c.estado === "no_llego" && c.fecha.startsWith(prefijoMes));
+  const perdido = noShows.reduce((s, c) => s + c.precio, 0);
+
   // ── Calendario ──
   const diasEnMes = new Date(mes.a, mes.m, 0).getDate();
   const primerDia = new Date(mes.a, mes.m - 1, 1).getDay();
@@ -639,6 +795,10 @@ export default function App() {
         @keyframes subir{from{transform:translateY(100%)}to{transform:translateY(0)}}
         @keyframes fade{from{opacity:0}to{opacity:1}}
         @keyframes toast{0%{opacity:0;transform:translateY(12px)}10%{opacity:1;transform:translateY(0)}88%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(12px)}}
+        @keyframes blurin{from{opacity:0;filter:blur(9px)}to{opacity:1;filter:blur(0)}}
+        .spot{position:relative}
+        .spot::before{content:"";position:absolute;inset:0;border-radius:inherit;opacity:0;transition:opacity .4s;pointer-events:none;background:radial-gradient(340px circle at var(--mx,50%) var(--my,0), var(--spot,rgba(212,160,60,.2)), transparent 62%)}
+        .spot:hover::before,.spot:focus-within::before{opacity:1}
         *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body,#root{margin:0;padding:0;background:${C.bg}}
         .sc::-webkit-scrollbar{display:none}
@@ -655,7 +815,16 @@ export default function App() {
           background: C.panelAlt, border: `1px solid ${C.gold}`, borderRadius: 11,
           padding: "13px 15px", fontSize: 13.5,
           animation: "toast 2.5s ease forwards", boxShadow: "0 10px 30px rgba(0,0,0,.55)",
-        }}>{aviso.texto}</div>
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+        }}>
+          <span>{aviso.texto}</span>
+          {aviso.accion && (
+            <button onClick={() => { aviso.accion.fn(); }} style={{
+              flexShrink: 0, background: C.gold, color: C.bg, border: "none",
+              borderRadius: 8, padding: "8px 13px", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+            }}>{aviso.accion.label}</button>
+          )}
+        </div>
       )}
 
       {/* Encabezado — fondo opaco a propósito: un backdrop-filter sobre un
@@ -827,7 +996,7 @@ export default function App() {
             {listo ? (
               <div style={{ textAlign: "center", paddingTop: 50, animation: "pop .35s ease" }}>
                 <div style={{ fontSize: 44, marginBottom: 10 }}>✂️</div>
-                <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 27, color: C.gold, letterSpacing: 1 }}>CITA AGENDADA</div>
+                <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 27, color: C.gold, letterSpacing: 1 }}>{editId != null ? "CITA ACTUALIZADA" : "CITA AGENDADA"}</div>
                 <div style={{ color: C.mute, fontSize: 13.5, marginTop: 10, lineHeight: 1.65 }}>
                   {nombre || "Cliente nuevo"}<br />
                   {S?.nombre} · {fmtHora(hueco)} · {BARBEROS.find(b => b.id === barbero)?.nombre}<br />
@@ -943,10 +1112,10 @@ export default function App() {
                       <span style={{ color: C.gold }}> ${S?.precio}</span>
                     </div>
 
-                    <button onClick={crear} style={{
+                    <button onClick={guardar} style={{
                       width: "100%", marginTop: 15, background: C.gold, color: C.bg, border: "none",
                       padding: "16px", borderRadius: 11, fontSize: 16, fontWeight: 700, cursor: "pointer", minHeight: 54,
-                    }}>Agendar</button>
+                    }}>{editId != null ? "Guardar cambios" : "Agendar"}</button>
                     <button onClick={() => setPaso(1)} style={{
                       width: "100%", marginTop: 10, background: "none", border: "none",
                       color: C.mute, fontSize: 13, cursor: "pointer", padding: "10px 0",
@@ -1024,10 +1193,16 @@ export default function App() {
               <div style={{ marginTop: 18, animation: "pop .3s ease" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 11 }}>
                   <span style={{ fontSize: 14.5, fontWeight: 700 }}>{fmtFechaLarga(diaSel)}</span>
-                  <button onClick={() => { setFecha(diaSel); setAbierta(null); setTab("agenda"); }} style={{
-                    background: "none", border: `1px solid ${C.gold}`, color: C.gold,
-                    borderRadius: 9, padding: "8px 13px", fontSize: 12, cursor: "pointer", minHeight: 40,
-                  }}>Abrir agenda</button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => agendarEn(diaSel)} style={{
+                      background: C.gold, border: `1px solid ${C.gold}`, color: C.bg,
+                      borderRadius: 9, padding: "8px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer", minHeight: 40,
+                    }}>Agendar</button>
+                    <button onClick={() => { setFecha(diaSel); setAbierta(null); setTab("agenda"); }} style={{
+                      background: "none", border: `1px solid ${C.gold}`, color: C.gold,
+                      borderRadius: 9, padding: "8px 13px", fontSize: 12, cursor: "pointer", minHeight: 40,
+                    }}>Abrir agenda</button>
+                  </div>
                 </div>
                 {citas.filter(c => c.fecha === diaSel).sort((a, b) => a.h - b.h).map(c => {
                   const b = BARBEROS.find(x => x.id === c.barbero);
@@ -1156,20 +1331,159 @@ export default function App() {
               <div style={{ fontSize: 12, color: "#D98A80", marginBottom: 6 }}>Clientes que no llegaron (mes)</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                 <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 30, color: "#E8A398" }}>
-                  <CountUp to={7} play={vistoDash} />
+                  <CountUp to={noShows.length} play={vistoDash} />
                 </span>
                 <span style={{ fontSize: 13, color: "#D98A80" }}>
-                  = <CountUp to={1360} prefix="$" play={vistoDash} /> perdidos
+                  = <CountUp to={perdido} prefix="$" play={vistoDash} /> perdidos
                 </span>
               </div>
               <div style={{ fontSize: 11.5, color: C.mute, marginTop: 9, lineHeight: 1.5 }}>
-                Dato de ejemplo para dimensionar el hueco que dejan las ausencias.
+                {noShows.length === 0
+                  ? "Sin ausencias registradas este mes. Marca una cita como “no llegó” desde su ficha."
+                  : "Se cuentan las citas marcadas como “no llegó” en la agenda."}
               </div>
             </div>
+
+            {/* Reiniciar deja la demo como recién abierta: útil entre una presentación
+                y la siguiente para no arrastrar lo que se tecleó de prueba. */}
+            <button onClick={reiniciarDemo} style={{
+              width: "100%", marginTop: 12, background: "transparent", color: C.mute,
+              border: `1px solid ${C.line}`, borderRadius: 11, padding: "13px",
+              fontSize: 13, cursor: "pointer", minHeight: 48,
+            }}>Reiniciar demo</button>
             <div style={{ height: 24 }} />
           </div>
         )}
       </main>
+
+      {/* ══ HOJA: FICHA DEL CLIENTE ══ */}
+      {detalle && (() => {
+        const b = BARBEROS.find(x => x.id === detalle.barbero);
+        const completada = detalle.estado === "completada";
+        const ausente = detalle.estado === "no_llego";
+        // Historial del mismo cliente en toda la agenda, no solo en el día.
+        const hist = citas.filter(c => claveCliente(c.cliente) === claveCliente(detalle.cliente));
+        const visitas = hist.filter(c => c.estado === "completada").length;
+        const gasto = hist.filter(c => c.estado === "completada").reduce((s, c) => s + c.precio, 0);
+        const faltas = hist.filter(c => c.estado === "no_llego").length;
+        const tel10 = (detalle.tel || "").replace(/\D/g, "");
+
+        const pill = (bg, col, borde, txt, fn) => (
+          <button onClick={fn} style={{
+            background: bg, color: col, border: `1px solid ${borde}`,
+            borderRadius: 11, padding: "13px 0", fontSize: 13.5, fontWeight: 600,
+            cursor: "pointer", minHeight: 48,
+          }}>{txt}</button>
+        );
+
+        return (
+          <>
+            <div onClick={() => setDetalle(null)} style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", zIndex: 80, animation: "fade .2s ease",
+            }} />
+            <div className="sc" style={{
+              position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+              width: "min(100%,560px)", zIndex: 81,
+              background: C.panelAlt, borderRadius: "22px 22px 0 0",
+              borderTop: `1px solid ${C.line}`, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)",
+              animation: "subir .3s cubic-bezier(.2,.9,.3,1)", maxHeight: "82dvh", overflowY: "auto",
+            }}>
+              <div style={{ width: 38, height: 4, borderRadius: 3, background: C.line, margin: "0 auto 14px" }} />
+
+              {/* Cabecera con el foco radial de ReactBits siguiendo al cursor */}
+              <SpotlightCard
+                spot={`${b.color}33`}
+                style={{
+                  background: C.panel, border: `1px solid ${C.line}`,
+                  borderLeft: `3px solid ${b.color}`, borderRadius: 14,
+                  padding: "15px 16px", marginBottom: 13, animation: "blurin .4s ease",
+                }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.15 }}>{detalle.cliente}</div>
+                    <div style={{ fontSize: 12.5, color: C.mute, marginTop: 4 }}>
+                      {detalle.serv} · {fmtHora(detalle.h)} · {b.nombre}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 26, color: C.gold, lineHeight: 1 }}>${detalle.precio}</div>
+                    <div style={{
+                      fontSize: 10.5, marginTop: 5, fontWeight: 600, letterSpacing: .3,
+                      color: completada ? C.verde : ausente ? "#E8A398" : C.mute,
+                    }}>
+                      {completada ? "Completada" : ausente ? "No llegó" : detalle.estado === "confirmada" ? "Confirmada" : "Pendiente"}
+                    </div>
+                  </div>
+                </div>
+              </SpotlightCard>
+
+              {/* Teléfono: si lo hay, es enlace para marcar directo. Sin dato, se omite. */}
+              {tel10 && (
+                <a href={`tel:${tel10}`} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11,
+                  padding: "13px 15px", marginBottom: 9, textDecoration: "none", color: C.text, minHeight: 50,
+                }}>
+                  <span style={{ fontSize: 11.5, color: C.mute }}>Teléfono</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: C.gold, fontVariantNumeric: "tabular-nums" }}>{detalle.tel}</span>
+                </a>
+              )}
+
+              {/* La nota solo aparece si el cliente dejó algo escrito. */}
+              {detalle.nota && detalle.nota.trim() && (
+                <div style={{
+                  background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11,
+                  padding: "13px 15px", marginBottom: 9,
+                }}>
+                  <div style={{ fontSize: 11.5, color: C.mute, marginBottom: 5 }}>Nota</div>
+                  <div style={{ fontSize: 14, lineHeight: 1.5, fontStyle: "italic" }}>{detalle.nota}</div>
+                </div>
+              )}
+
+              {/* Historial: da contexto de qué tan asiduo es el cliente. */}
+              <div style={{
+                display: "grid", gridTemplateColumns: faltas > 0 ? "1fr 1fr 1fr" : "1fr 1fr", gap: 9, marginBottom: 14,
+              }}>
+                <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11, padding: "12px 13px" }}>
+                  <div style={{ fontSize: 10.5, color: C.mute }}>Visitas</div>
+                  <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 24, lineHeight: 1.1 }}>{visitas}</div>
+                </div>
+                <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11, padding: "12px 13px" }}>
+                  <div style={{ fontSize: 10.5, color: C.mute }}>Gastado</div>
+                  <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 24, color: C.gold, lineHeight: 1.1 }}>${gasto.toLocaleString("es-MX")}</div>
+                </div>
+                {faltas > 0 && (
+                  <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 11, padding: "12px 13px" }}>
+                    <div style={{ fontSize: 10.5, color: C.mute }}>Faltas</div>
+                    <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 24, color: "#E8A398", lineHeight: 1.1 }}>{faltas}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Acciones sobre la cita */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
+                {completada
+                  ? pill(C.gold, C.bg, C.gold, "↩  Reabrir", () => alternarHecha(detalle))
+                  : pill(C.verde, "#fff", C.verde, "✓  Completar", () => alternarHecha(detalle))}
+                {pill(C.panel, C.text, C.line, "✎  Editar", () => editarCita(detalle))}
+                {pill(C.panel, C.text, C.line, "⇄  Mover", () => iniciarMover(detalle))}
+                {ausente
+                  ? pill(C.panel, C.text, C.line, "↩  Vuelve a agenda", () => marcarNoLlego(detalle))
+                  : pill(C.panel, "#E8A398", "rgba(200,70,60,.4)", "✕  No llegó", () => marcarNoLlego(detalle))}
+              </div>
+              <button onClick={() => borrar(detalle)} style={{
+                width: "100%", marginTop: 9, background: "transparent", color: "#D98A80",
+                border: "1px solid rgba(200,70,60,.35)", borderRadius: 11, padding: "13px",
+                fontSize: 13.5, cursor: "pointer", minHeight: 48,
+              }}>Cancelar cita</button>
+              <button onClick={() => setDetalle(null)} style={{
+                width: "100%", marginTop: 9, background: "transparent", color: C.mute,
+                border: "none", borderRadius: 11, padding: "11px", fontSize: 13.5, cursor: "pointer", minHeight: 44,
+              }}>Cerrar</button>
+            </div>
+          </>
+        );
+      })()}
 
       {/* ══ HOJA: MOVER ══ */}
       {moviendo && (
@@ -1186,23 +1500,43 @@ export default function App() {
           }}>
             <div style={{ width: 38, height: 4, borderRadius: 3, background: C.line, margin: "0 auto 16px" }} />
             <h3 style={{ fontSize: 16.5, fontWeight: 700, margin: "0 0 4px" }}>Mover cita</h3>
-            <p style={{ fontSize: 12.5, color: C.mute, margin: "0 0 15px" }}>
+            <p style={{ fontSize: 12.5, color: C.mute, margin: "0 0 13px" }}>
               {moviendo.cliente} · {moviendo.serv} · {moviendo.dur} min
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-              {huecosPara(moviendo.dur, moviendo.fecha, moviendo.id, moviendo.barbero).map(h => (
-                <button key={h} onClick={() => confirmarMover(h)} style={{
-                  background: h === moviendo.h ? C.gold : C.panel,
-                  color: h === moviendo.h ? C.bg : C.text,
-                  border: `1px solid ${h === moviendo.h ? C.gold : C.line}`,
-                  borderRadius: 10, padding: "14px 0", fontSize: 13.5,
-                  fontWeight: 600, cursor: "pointer", minHeight: 48,
-                }}>{fmtHora(h)}</button>
+
+            {/* Cambiar de barbero además de hora: la agenda no siempre la libra el
+                mismo empleado. Al cambiar de barbero, los huecos se recalculan. */}
+            <p style={{ fontSize: 11.5, color: C.mute, margin: "0 0 7px" }}>¿Con quién?</p>
+            <div style={{ display: "flex", gap: 8, marginBottom: 15 }}>
+              {BARBEROS.map(b => (
+                <button key={b.id} onClick={() => setMovBarbero(b.id)} style={{
+                  flex: 1, background: movBarbero === b.id ? b.color : C.panel,
+                  color: movBarbero === b.id ? C.bg : C.text,
+                  border: `1px solid ${movBarbero === b.id ? b.color : C.line}`,
+                  borderRadius: 11, padding: "12px 0", fontSize: 13.5,
+                  fontWeight: movBarbero === b.id ? 700 : 500, cursor: "pointer", minHeight: 46,
+                }}>{b.nombre}</button>
               ))}
             </div>
-            {huecosPara(moviendo.dur, moviendo.fecha, moviendo.id, moviendo.barbero).length === 0 && (
+
+            <p style={{ fontSize: 11.5, color: C.mute, margin: "0 0 7px" }}>¿A qué hora?</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+              {huecosPara(moviendo.dur, moviendo.fecha, moviendo.id, movBarbero).map(h => {
+                const actual = h === moviendo.h && movBarbero === moviendo.barbero;
+                return (
+                  <button key={h} onClick={() => confirmarMover(h)} style={{
+                    background: actual ? C.gold : C.panel,
+                    color: actual ? C.bg : C.text,
+                    border: `1px solid ${actual ? C.gold : C.line}`,
+                    borderRadius: 10, padding: "14px 0", fontSize: 13.5,
+                    fontWeight: 600, cursor: "pointer", minHeight: 48,
+                  }}>{fmtHora(h)}</button>
+                );
+              })}
+            </div>
+            {huecosPara(moviendo.dur, moviendo.fecha, moviendo.id, movBarbero).length === 0 && (
               <p style={{ fontSize: 13, color: C.mute, textAlign: "center", padding: "22px 0" }}>
-                No hay huecos libres de {moviendo.dur} min este día.
+                {BARBEROS.find(b => b.id === movBarbero)?.nombre} no tiene huecos de {moviendo.dur} min este día.
               </p>
             )}
             <button onClick={() => setMoviendo(null)} style={{
